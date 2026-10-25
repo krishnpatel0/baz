@@ -1,7 +1,7 @@
 """`strix auth` — ChatGPT subscription sign-in (login / status / logout).
 
 Signing in only stores OAuth tokens (``~/.strix/subscription-auth.json``); model
-selection stays with ``STRIX_LLM``. A ``chatgpt/<model>`` STRIX_LLM runs on the
+selection stays with ``HAVOC_LLM``. A ``chatgpt/<model>`` HAVOC_LLM runs on the
 subscription.
 """
 
@@ -251,10 +251,10 @@ def _status(console: Console) -> int:
     console.print("[green]Signed in[/] with a ChatGPT subscription.")
     console.print(f"  Account: [bold]{record.get('account_id')}[/]")
     if codex.subscription_model(settings.llm.model):
-        console.print(f"  Runs use the subscription (STRIX_LLM=[bold]{settings.llm.model}[/]).")
+        console.print(f"  Runs use the subscription (HAVOC_LLM=[bold]{settings.llm.model}[/]).")
     else:
         console.print(
-            "  [yellow]Note:[/] set [cyan]STRIX_LLM[/] to e.g. [cyan]chatgpt/gpt-5.4[/] "
+            "  [yellow]Note:[/] set [cyan]HAVOC_LLM[/] to e.g. [cyan]chatgpt/gpt-5.4[/] "
             "to run on the subscription."
         )
     return 0
@@ -289,7 +289,7 @@ def _print_success(console: Console) -> None:
     text.append("Signed in with your ChatGPT subscription", style="bold #22c55e")
     text.append("\n\n", style="white")
     text.append("Set ", style="white")
-    text.append("STRIX_LLM", style="bold white")
+    text.append("HAVOC_LLM", style="bold white")
     text.append(" to a ", style="white")
     text.append("chatgpt/", style="bold cyan")
     text.append(" model (e.g. ", style="white")

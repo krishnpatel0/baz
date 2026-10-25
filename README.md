@@ -84,7 +84,7 @@ Strix are autonomous AI penetration testing agents that act just like real hacke
 curl -sSL https://strix.ai/install | bash
 
 # Configure your AI provider
-export STRIX_LLM="openrouter/z-ai/glm-5.3"
+export HAVOC_LLM="openrouter/z-ai/glm-5.3"
 export LLM_API_KEY="your-api-key"
 
 # Run your first security assessment
@@ -282,7 +282,7 @@ jobs:
 
       - name: Run Strix
         env:
-          STRIX_LLM: ${{ secrets.STRIX_LLM }}
+          HAVOC_LLM: ${{ secrets.HAVOC_LLM }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
 
         run: strix -n -t ./ --scan-mode quick
@@ -296,7 +296,7 @@ jobs:
 ### Configuration
 
 ```bash
-export STRIX_LLM="openrouter/z-ai/glm-5.3"
+export HAVOC_LLM="openrouter/z-ai/glm-5.3"
 export LLM_API_KEY="your-api-key"
 
 # Optional
@@ -313,7 +313,7 @@ Instead of a metered API key, you can run Strix on your ChatGPT Plus/Pro subscri
 
 ```bash
 strix auth login chatgpt             # sign in with your ChatGPT account
-export STRIX_LLM="chatgpt/gpt-5.4"   # chatgpt/<model> runs on the subscription
+export HAVOC_LLM="chatgpt/gpt-5.4"   # chatgpt/<model> runs on the subscription
 strix auth status                    # show the active sign-in, or logout to forget it
 ```
 

@@ -52,7 +52,7 @@ class CustomBuildHook(BuildHookInterface):  # type: ignore[type-arg]
 
         build_data["force_include"][str(output)] = f"strix/bin/{executable}"
         build_data["pure_python"] = False
-        platform_tag = os.environ.get("STRIX_WHEEL_PLATFORM_TAG")
+        platform_tag = os.environ.get("HAVOC_WHEEL_PLATFORM_TAG")
         if not platform_tag:
             platform_tag = sysconfig.get_platform().replace("-", "_").replace(".", "_")
         build_data["tag"] = f"py3-none-{platform_tag}"

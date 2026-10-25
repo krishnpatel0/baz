@@ -602,7 +602,7 @@ def _build_parser(group: str, verb_label: str, cmd: Cmd) -> argparse.ArgumentPar
         "--workspace-id",
         default=None,
         metavar="ORG_ID",
-        help="Expected workspace for an override CLI token (or STRIX_WORKSPACE_ID).",
+        help="Expected workspace for an override CLI token (or HAVOC_WORKSPACE_ID).",
     )
     parser.add_argument("--app-url", default=None, metavar="URL", help="Platform URL override.")
     parser.add_argument(

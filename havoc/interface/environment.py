@@ -42,7 +42,7 @@ def validate_environment() -> None:
     if codex.subscription_model(settings.llm.model):
         if not codex.is_authenticated():
             console.print(
-                f"[red]STRIX_LLM={settings.llm.model} uses your ChatGPT subscription, "
+                f"[red]HAVOC_LLM={settings.llm.model} uses your ChatGPT subscription, "
                 "but you're not signed in.[/] Run [cyan]strix auth login chatgpt[/] first."
             )
             report_error("subscription_not_signed_in")
@@ -51,7 +51,7 @@ def validate_environment() -> None:
         return
 
     if not settings.llm.model:
-        missing_required_vars.append("STRIX_LLM")
+        missing_required_vars.append("HAVOC_LLM")
 
     if not settings.llm.api_key:
         missing_optional_vars.append("LLM_API_KEY")
@@ -78,9 +78,9 @@ def validate_environment() -> None:
 
         error_text.append("\nRequired environment variables:\n", style="white")
         for var in missing_required_vars:
-            if var == "STRIX_LLM":
+            if var == "HAVOC_LLM":
                 error_text.append("• ", style="white")
-                error_text.append("STRIX_LLM", style="bold cyan")
+                error_text.append("HAVOC_LLM", style="bold cyan")
                 error_text.append(
                     " - Model name to use (e.g., 'openrouter/z-ai/glm-5.3' or "
                     "'anthropic/claude-opus-4-7')\n",
@@ -111,9 +111,9 @@ def validate_environment() -> None:
                         " - API key for Exa web search (enables real-time research)\n",
                         style="white",
                     )
-                elif var == "STRIX_REASONING_EFFORT":
+                elif var == "HAVOC_REASONING_EFFORT":
                     error_text.append("• ", style="white")
-                    error_text.append("STRIX_REASONING_EFFORT", style="bold cyan")
+                    error_text.append("HAVOC_REASONING_EFFORT", style="bold cyan")
                     error_text.append(
                         " - Reasoning effort level: none, minimal, low, medium, high, xhigh, "
                         "max (default: high)\n",
@@ -121,7 +121,7 @@ def validate_environment() -> None:
                     )
 
         error_text.append("\nExample setup:\n", style="white")
-        error_text.append("export STRIX_LLM='openrouter/z-ai/glm-5.3'\n", style="dim white")
+        error_text.append("export HAVOC_LLM='openrouter/z-ai/glm-5.3'\n", style="dim white")
 
         if missing_optional_vars:
             for var in missing_optional_vars:
@@ -137,9 +137,9 @@ def validate_environment() -> None:
                     )
                 elif var == "EXA_API_KEY":
                     error_text.append("export EXA_API_KEY='your-exa-key-here'\n", style="dim white")
-                elif var == "STRIX_REASONING_EFFORT":
+                elif var == "HAVOC_REASONING_EFFORT":
                     error_text.append(
-                        "export STRIX_REASONING_EFFORT='high'\n",
+                        "export HAVOC_REASONING_EFFORT='high'\n",
                         style="dim white",
                     )
 

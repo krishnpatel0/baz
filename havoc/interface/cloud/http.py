@@ -76,10 +76,10 @@ def configure(
     global _workspace_id_override  # noqa: PLW0603
     _app_url_override = base_url.rstrip("/") if base_url else None
     _token_override_active = token_override
-    explicit_workspace = workspace_id or os.environ.get("STRIX_WORKSPACE_ID")
+    explicit_workspace = workspace_id or os.environ.get("HAVOC_WORKSPACE_ID")
     if explicit_workspace:
         _workspace_id_override = explicit_workspace.strip()
-    elif not token_override and not os.environ.get("STRIX_API_TOKEN"):
+    elif not token_override and not os.environ.get("HAVOC_API_TOKEN"):
         record = read_record()
         stored_workspace = record.get("organization_id") if record is not None else None
         _workspace_id_override = (
@@ -103,10 +103,10 @@ def app_url() -> str:
         return _app_url_override
     viewer = load_settings().viewer
     configured = viewer.app_url.rstrip("/")
-    explicitly_configured = bool(os.environ.get("STRIX_APP_URL")) or "app_url" in getattr(
+    explicitly_configured = bool(os.environ.get("HAVOC_APP_URL")) or "app_url" in getattr(
         viewer, "model_fields_set", set[str]()
     )
-    if explicitly_configured or _token_override_active or os.environ.get("STRIX_API_TOKEN"):
+    if explicitly_configured or _token_override_active or os.environ.get("HAVOC_API_TOKEN"):
         return configured
     record = read_record()
     stored = record.get("app_url") if record is not None else None
@@ -121,7 +121,7 @@ def app_url() -> str:
 
 
 def api_token(override: str | None = None) -> str:
-    token = override or os.environ.get("STRIX_API_TOKEN")
+    token = override or os.environ.get("HAVOC_API_TOKEN")
     if not token:
         record = read_record()
         if record is not None:
@@ -131,7 +131,7 @@ def api_token(override: str | None = None) -> str:
                 token = stored
     if not token or not token.strip():
         raise CloudError(
-            "not signed in. Run `strix cloud login`, or set STRIX_API_TOKEN.",
+            "not signed in. Run `strix cloud login`, or set HAVOC_API_TOKEN.",
             exit_code=EXIT_AUTH,
         )
     return token.strip()
@@ -206,7 +206,7 @@ def expected_workspace_id(*, token_override: bool) -> str | None:
     """Pin every request in this process to the workspace selected at startup."""
     if _workspace_id_override:
         return _workspace_id_override
-    if token_override or _token_override_active or os.environ.get("STRIX_API_TOKEN"):
+    if token_override or _token_override_active or os.environ.get("HAVOC_API_TOKEN"):
         return None
     return None
 
@@ -344,14 +344,14 @@ def check(response: requests.Response) -> Any:
         content_type = response.headers.get("content-type", "").lower()
         if "application/json" not in content_type:
             raise CloudError(
-                "the server returned a non-JSON response. Check STRIX_APP_URL and preview "
+                "the server returned a non-JSON response. Check HAVOC_APP_URL and preview "
                 "access, then retry."
             )
         try:
             return response.json()
         except ValueError as exc:
             raise CloudError(
-                "the server returned malformed JSON. Check STRIX_APP_URL and preview "
+                "the server returned malformed JSON. Check HAVOC_APP_URL and preview "
                 "access, then retry."
             ) from exc
     detail = ""

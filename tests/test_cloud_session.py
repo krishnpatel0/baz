@@ -34,8 +34,8 @@ class Response:
 def auth_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     path = tmp_path / "platform-auth.json"
     monkeypatch.setattr(platform_cli, "AUTH_PATH", path)
-    monkeypatch.delenv("STRIX_API_TOKEN", raising=False)
-    monkeypatch.delenv("STRIX_WORKSPACE_ID", raising=False)
+    monkeypatch.delenv("HAVOC_API_TOKEN", raising=False)
+    monkeypatch.delenv("HAVOC_WORKSPACE_ID", raising=False)
     return path
 
 

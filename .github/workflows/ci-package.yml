@@ -63,16 +63,16 @@ jobs:
           grep -E "'boto3\.session'" archive.txt >/dev/null
       - name: Binary reaches Vertex AI and Bedrock authentication
         env:
-          STRIX_TELEMETRY: "false"
-          STRIX_IMAGE: alpine:3.20
+          HAVOC_TELEMETRY: "false"
+          HAVOC_IMAGE: alpine:3.20
           VERTEXAI_PROJECT: strix-ci
           VERTEXAI_LOCATION: us-central1
           AWS_REGION: us-east-1
         run: |
           mkdir -p /tmp/target && echo 'print("hi")' > /tmp/target/app.py
-          STRIX_LLM=vertex_ai/gemini-2.5-pro dist/strix -n -t /tmp/target --scan-mode quick > vertex.log 2>&1 || true
+          HAVOC_LLM=vertex_ai/gemini-2.5-pro dist/strix -n -t /tmp/target --scan-mode quick > vertex.log 2>&1 || true
           grep -q "DefaultCredentialsError" vertex.log
           if grep -q "No module named" vertex.log; then exit 1; fi
-          STRIX_LLM=bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0 dist/strix -n -t /tmp/target --scan-mode quick > bedrock.log 2>&1 || true
+          HAVOC_LLM=bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0 dist/strix -n -t /tmp/target --scan-mode quick > bedrock.log 2>&1 || true
           grep -q "Unable to locate credentials" bedrock.log
           if grep -q "No module named" bedrock.log; then exit 1; fi

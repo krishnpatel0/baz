@@ -195,7 +195,7 @@ async def _aclose_all(connections: list[Any]) -> None:
 @pytest.fixture(autouse=True)
 def _clear_mcp_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """Hide any MCP settings the developer has exported in their own shell."""
-    for name in ("STRIX_MCP_CONFIG", "STRIX_MCP_ONLY", "STRIX_MCP_EXCLUDE"):
+    for name in ("HAVOC_MCP_CONFIG", "HAVOC_MCP_ONLY", "HAVOC_MCP_EXCLUDE"):
         monkeypatch.delenv(name, raising=False)
 
 
@@ -1306,7 +1306,7 @@ def test_loader_reads_env_var_override(tmp_path: Path, monkeypatch: pytest.Monke
         json.dumps([{"name": "local_fs", "transport": "stdio", "command": "npx"}]),
         encoding="utf-8",
     )
-    monkeypatch.setenv("STRIX_MCP_CONFIG", str(config_file))
+    monkeypatch.setenv("HAVOC_MCP_CONFIG", str(config_file))
 
     configs = load_user_mcp_configs()
 
@@ -1345,7 +1345,7 @@ def test_loader_include_selection_keeps_only_named(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     config_file = _names_file(tmp_path, "a", "b", "c")
-    monkeypatch.setenv("STRIX_MCP_ONLY", "a,c")
+    monkeypatch.setenv("HAVOC_MCP_ONLY", "a,c")
 
     configs = load_user_mcp_configs(config_file)
 
@@ -1356,7 +1356,7 @@ def test_loader_exclude_selection_drops_named(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     config_file = _names_file(tmp_path, "a", "b", "c")
-    monkeypatch.setenv("STRIX_MCP_EXCLUDE", "b")
+    monkeypatch.setenv("HAVOC_MCP_EXCLUDE", "b")
 
     configs = load_user_mcp_configs(config_file)
 

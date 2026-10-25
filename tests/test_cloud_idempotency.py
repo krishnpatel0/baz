@@ -31,7 +31,7 @@ class FakeResponse:
 
 @pytest.fixture(autouse=True)
 def _token(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("STRIX_API_TOKEN", "idempotency-test-token")
+    monkeypatch.setenv("HAVOC_API_TOKEN", "idempotency-test-token")
     monkeypatch.setattr(time, "sleep", lambda _seconds: None)
 
 

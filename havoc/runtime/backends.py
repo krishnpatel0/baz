@@ -1,4 +1,4 @@
-"""Sandbox backend registry — selected via STRIX_RUNTIME_BACKEND (default: docker)."""
+"""Sandbox backend registry — selected via HAVOC_RUNTIME_BACKEND (default: docker)."""
 
 from __future__ import annotations
 
@@ -70,7 +70,7 @@ def get_backend(name: str) -> SandboxBackend:
     if backend is None:
         supported = ", ".join(sorted(_BACKENDS))
         raise ValueError(
-            f"Unknown STRIX_RUNTIME_BACKEND: {name!r} (supported: {supported})",
+            f"Unknown HAVOC_RUNTIME_BACKEND: {name!r} (supported: {supported})",
         )
     logger.debug("Selected sandbox backend: %s", name)
     return backend

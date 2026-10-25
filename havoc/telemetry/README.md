@@ -31,7 +31,7 @@ We collect only very **basic** usage data including:
 Telemetry in Strix is entirely **optional**:
 
 ```bash
-export STRIX_TELEMETRY=0
+export HAVOC_TELEMETRY=0
 ```
 
 You can set this environment variable before running Strix to disable **all** telemetry.

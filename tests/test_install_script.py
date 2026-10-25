@@ -58,10 +58,10 @@ while [ "$#" -gt 0 ]; do
     shift 2
     continue
   fi
-  printf '%s\\n' "$1" >> "$STRIX_TEST_CURL_LOG"
+  printf '%s\\n' "$1" >> "$HAVOC_TEST_CURL_LOG"
   shift
 done
-cp "$STRIX_TEST_ARCHIVE" "$output"
+cp "$HAVOC_TEST_ARCHIVE" "$output"
 """,
     )
     return mock_bin
@@ -89,8 +89,8 @@ def _create_installer_environment(
         "PATH": f"{mock_bin}:/usr/bin:/bin",
         "SHELL": "/bin/bash",
         "TMPDIR": str(download_path),
-        "STRIX_TEST_ARCHIVE": str(archive_path),
-        "STRIX_TEST_CURL_LOG": str(curl_log_path),
+        "HAVOC_TEST_ARCHIVE": str(archive_path),
+        "HAVOC_TEST_CURL_LOG": str(curl_log_path),
         "VERSION": RELEASE_VERSION,
     }
     return environment, home_path, curl_log_path

@@ -332,13 +332,13 @@ Strix Cloud:
             parser.error(f"--mcp-config file not found: {args.mcp_config}")
         # The MCP loader reads this env var as its config-path override, so
         # setting it here makes the flag win over the default location.
-        os.environ["STRIX_MCP_CONFIG"] = str(mcp_config_path)
+        os.environ["HAVOC_MCP_CONFIG"] = str(mcp_config_path)
 
     # The MCP loader reads these as its per-run include/exclude selection.
     if args.mcp_server:
-        os.environ["STRIX_MCP_ONLY"] = ",".join(args.mcp_server)
+        os.environ["HAVOC_MCP_ONLY"] = ",".join(args.mcp_server)
     if args.mcp_exclude:
-        os.environ["STRIX_MCP_EXCLUDE"] = ",".join(args.mcp_exclude)
+        os.environ["HAVOC_MCP_EXCLUDE"] = ",".join(args.mcp_exclude)
 
     if args.update:
         sys.exit(0 if self_update() else 1)

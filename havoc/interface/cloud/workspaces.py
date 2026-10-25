@@ -98,7 +98,7 @@ def _use(  # noqa: PLR0912, PLR0915
     stored_record: dict[str, Any] = read_record() or {}
     # An override token may belong to a different account. Never mix its new
     # workspace state with identity or scope preferences from the stored sign-in.
-    external_token = args.token is not None or bool(os.environ.get("STRIX_API_TOKEN", "").strip())
+    external_token = args.token is not None or bool(os.environ.get("HAVOC_API_TOKEN", "").strip())
     record: dict[str, Any] = {} if external_token else dict(stored_record)
     body: dict[str, Any] = {}
     if args.scopes:

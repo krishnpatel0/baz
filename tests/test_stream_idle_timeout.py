@@ -179,7 +179,7 @@ async def test_first_event_and_whole_stream_are_bounded() -> None:
 @pytest.fixture
 def _reset_settings(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     for key in (
-        "STRIX_LLM",
+        "HAVOC_LLM",
         "LLM_DISABLE_STREAMING",
         "LLM_STREAM_IDLE_TIMEOUT",
         "LLM_STREAM_FIRST_EVENT_TIMEOUT",

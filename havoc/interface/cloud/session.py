@@ -48,7 +48,7 @@ def _common(parser: argparse.ArgumentParser) -> None:
 
 
 def _configure(args: argparse.Namespace) -> bool:
-    external = args.token is not None or bool(os.environ.get("STRIX_API_TOKEN", "").strip())
+    external = args.token is not None or bool(os.environ.get("HAVOC_API_TOKEN", "").strip())
     http.configure(
         base_url=args.app_url,
         timeout=args.timeout,

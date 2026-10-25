@@ -420,7 +420,7 @@ class GoTuiRuntime:
             if not self.controller.setup_mode:
                 self.init_run_state()
             env = child_environment()
-            env["STRIX_VERSION"] = package_version()
+            env["HAVOC_VERSION"] = package_version()
             command = self.binary_command()
             cwd = str(tui_source_dir()) if command[:2] == ["go", "run"] else None
             if cwd is not None:

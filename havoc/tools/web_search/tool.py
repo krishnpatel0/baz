@@ -283,7 +283,7 @@ def _do_get_contents(urls: list[str]) -> dict[str, Any]:
             "success": False,
             "error": (
                 "Page fetching needs the Exa provider "
-                "(operator pinned STRIX_WEB_SEARCH_PROVIDER to perplexity). "
+                "(operator pinned HAVOC_WEB_SEARCH_PROVIDER to perplexity). "
                 "Use web_search instead"
             ),
         }

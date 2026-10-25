@@ -54,7 +54,7 @@ class FakeResponse:
 
 @pytest.fixture(autouse=True)
 def _token(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("STRIX_API_TOKEN", "runtime-test-token")
+    monkeypatch.setenv("HAVOC_API_TOKEN", "runtime-test-token")
 
 
 def _console_output(data: Any, *, view: str | None = None, width: int = 160) -> str:
@@ -763,7 +763,7 @@ def test_wait_interruption_returns_130_with_remote_operation_id(
 def test_session_help_is_specific_and_human_whoami_shows_scopes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: Any
 ) -> None:
-    monkeypatch.delenv("STRIX_API_TOKEN", raising=False)
+    monkeypatch.delenv("HAVOC_API_TOKEN", raising=False)
     monkeypatch.setattr(platform_cli, "AUTH_PATH", tmp_path / "auth.json")
     platform_cli.save_record(
         {
@@ -785,7 +785,7 @@ def test_session_help_is_specific_and_human_whoami_shows_scopes(
 def test_non_tty_whoami_and_logout_emit_json(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: Any
 ) -> None:
-    monkeypatch.delenv("STRIX_API_TOKEN", raising=False)
+    monkeypatch.delenv("HAVOC_API_TOKEN", raising=False)
     monkeypatch.setattr(platform_cli, "AUTH_PATH", tmp_path / "auth.json")
     monkeypatch.setattr(sys.stdout, "isatty", lambda: False)
     platform_cli.save_record(

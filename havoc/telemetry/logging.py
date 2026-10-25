@@ -48,7 +48,7 @@ _DATEFMT = "%Y-%m-%d %H:%M:%S"
 
 
 # Third-party loggers that get noisy at DEBUG. Capped so the file isn't
-# drowned in their internals when STRIX_DEBUG=1.
+# drowned in their internals when HAVOC_DEBUG=1.
 _NOISY_LIBS: tuple[str, ...] = (
     "httpx",
     "httpcore",
@@ -132,7 +132,7 @@ class _CurrentStderrHandler(logging.StreamHandler):  # type: ignore[type-arg]
 def _debug_enabled(debug: bool | None) -> bool:
     if debug is not None:
         return debug
-    return (os.environ.get("STRIX_DEBUG") or "").strip().lower() in {"1", "true", "yes", "on"}
+    return (os.environ.get("HAVOC_DEBUG") or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _stream_handler(debug: bool) -> logging.Handler:
@@ -166,7 +166,7 @@ def setup_scan_logging(run_dir: Path, *, debug: bool | None = None) -> Callable[
             created if missing and opened append-mode (so re-runs of the
             same scan_id concatenate cleanly).
         debug: When ``True``, stderr handler runs at DEBUG instead of
-            ERROR. ``None`` (default) reads ``STRIX_DEBUG`` env: ``1`` /
+            ERROR. ``None`` (default) reads ``HAVOC_DEBUG`` env: ``1`` /
             ``true`` / ``yes`` / ``on`` enables debug.
 
     Returns:

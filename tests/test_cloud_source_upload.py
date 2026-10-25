@@ -39,7 +39,7 @@ class MalformedJsonResponse(FakeResponse):
 
 @pytest.fixture(autouse=True)
 def _token_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("STRIX_API_TOKEN", "test-token")
+    monkeypatch.setenv("HAVOC_API_TOKEN", "test-token")
 
 
 def _git_source(tmp_path: Path) -> Path:

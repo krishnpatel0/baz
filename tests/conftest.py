@@ -18,12 +18,12 @@ def _isolate_mcp_config(
     connections it never asked for. Point the loader at a path that does not
     exist so it resolves to "no connections", and clear the per-run selection
     env vars. Tests that exercise the loader itself set their own
-    ``STRIX_MCP_CONFIG`` after this runs and so override it.
+    ``HAVOC_MCP_CONFIG`` after this runs and so override it.
     """
     missing = tmp_path_factory.mktemp("mcp-isolation") / "no-servers.json"
-    monkeypatch.setenv("STRIX_MCP_CONFIG", str(missing))
-    monkeypatch.delenv("STRIX_MCP_ONLY", raising=False)
-    monkeypatch.delenv("STRIX_MCP_EXCLUDE", raising=False)
+    monkeypatch.setenv("HAVOC_MCP_CONFIG", str(missing))
+    monkeypatch.delenv("HAVOC_MCP_ONLY", raising=False)
+    monkeypatch.delenv("HAVOC_MCP_EXCLUDE", raising=False)
 
 
 @pytest.fixture(autouse=True)

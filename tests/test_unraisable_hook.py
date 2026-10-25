@@ -126,7 +126,7 @@ def test_process_exit_prints_nothing_to_stderr() -> None:
     env = {
         k: v for k, v in os.environ.items() if k in {"PATH", "HOME", "SYSTEMROOT", "TEMP", "TMP"}
     }
-    env |= {"PYTHONPATH": str(Path(__file__).resolve().parents[1]), "STRIX_DEBUG": ""}
+    env |= {"PYTHONPATH": str(Path(__file__).resolve().parents[1]), "HAVOC_DEBUG": ""}
     proc = subprocess.run(  # noqa: S603
         [sys.executable, "-c", _EXIT_SCRIPT],
         capture_output=True,

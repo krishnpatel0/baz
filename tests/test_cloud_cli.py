@@ -51,7 +51,7 @@ class FakeResponse:
 
 @pytest.fixture(autouse=True)
 def _token_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("STRIX_API_TOKEN", "test-token")
+    monkeypatch.setenv("HAVOC_API_TOKEN", "test-token")
 
 
 def test_help_returns_zero() -> None:
@@ -79,7 +79,7 @@ def test_successful_html_response_is_reported_without_dumping_html(
     assert cloud.run_cloud(["workspaces", "list", "--json"]) == 1
     output = capsys.readouterr().out
     assert "non-JSON response" in output
-    assert "STRIX_APP_URL" in output
+    assert "HAVOC_APP_URL" in output
     assert "<!DOCTYPE" not in output
 
 
@@ -609,7 +609,7 @@ def test_typed_json_flag_parse_error_is_usage_error() -> None:
 def test_missing_token_exits_with_auth_code(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.delenv("STRIX_API_TOKEN", raising=False)
+    monkeypatch.delenv("HAVOC_API_TOKEN", raising=False)
     monkeypatch.setattr(platform_cli, "AUTH_PATH", tmp_path / "platform-auth.json")
     assert cloud.run_cloud(["credits"]) == http.EXIT_AUTH
 
@@ -617,7 +617,7 @@ def test_missing_token_exits_with_auth_code(
 def test_stored_token_is_never_sent_to_a_different_platform_origin(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("STRIX_API_TOKEN", raising=False)
+    monkeypatch.delenv("HAVOC_API_TOKEN", raising=False)
     monkeypatch.setattr(http, "_app_url_override", "https://attacker.example")
     monkeypatch.setattr(
         http,
@@ -636,7 +636,7 @@ def test_stored_token_is_never_sent_to_a_different_platform_origin(
 
 
 def test_stored_token_requires_an_issuer_binding(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("STRIX_API_TOKEN", raising=False)
+    monkeypatch.delenv("HAVOC_API_TOKEN", raising=False)
     monkeypatch.setattr(http, "_app_url_override", "https://app.strix.ai")
     monkeypatch.setattr(http, "read_record", lambda: {"api_token": "legacy-secret"})
     monkeypatch.setattr(
@@ -653,7 +653,7 @@ def test_stored_token_requires_an_issuer_binding(monkeypatch: pytest.MonkeyPatch
 def test_stored_token_is_sent_only_to_its_bound_platform(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("STRIX_API_TOKEN", raising=False)
+    monkeypatch.delenv("HAVOC_API_TOKEN", raising=False)
     monkeypatch.setattr(http, "_app_url_override", "https://preview.strix.ai")
     monkeypatch.setattr(
         http,
@@ -677,7 +677,7 @@ def test_stored_token_is_sent_only_to_its_bound_platform(
 def test_explicit_token_can_target_an_explicit_platform(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("STRIX_API_TOKEN", raising=False)
+    monkeypatch.delenv("HAVOC_API_TOKEN", raising=False)
     monkeypatch.setattr(http, "_app_url_override", "https://preview.strix.ai")
     monkeypatch.setattr(
         http,
@@ -724,7 +724,7 @@ def test_credits_alias_routes_to_billing(monkeypatch: pytest.MonkeyPatch) -> Non
 def test_whoami_json_is_machine_readable_and_omits_the_token(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: Any
 ) -> None:
-    monkeypatch.delenv("STRIX_API_TOKEN", raising=False)
+    monkeypatch.delenv("HAVOC_API_TOKEN", raising=False)
     monkeypatch.setattr(platform_cli, "AUTH_PATH", tmp_path / "platform-auth.json")
     platform_cli.save_record(
         {
@@ -944,7 +944,7 @@ def test_topup_keeps_token_out_of_wallet_process_and_forwards_payment(
     assert "--ignore-scripts" in commands[0]
     assert "-H" not in commands[0]
     assert "--fail" in commands[0]
-    assert child_envs[0].get("STRIX_API_TOKEN") is None
+    assert child_envs[0].get("HAVOC_API_TOKEN") is None
     assert child_envs[0].get("UNRELATED_CODING_AGENT_SECRET") is None
     for name in ("NO_PROXY", "no_proxy"):
         bypasses = child_envs[0][name].split(",")
@@ -1700,7 +1700,7 @@ def test_handoff_missing_expected_url_is_an_error(
 def test_workspaces_use_switches_stored_token(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: Any
 ) -> None:
-    monkeypatch.delenv("STRIX_API_TOKEN", raising=False)
+    monkeypatch.delenv("HAVOC_API_TOKEN", raising=False)
     auth_path = tmp_path / "platform-auth.json"
     monkeypatch.setattr(platform_cli, "AUTH_PATH", auth_path)
     monkeypatch.setattr(workspaces, "AUTH_PATH", auth_path)
@@ -1817,7 +1817,7 @@ def test_workspace_use_environment_token_starts_with_fresh_account_state(
     auth_path = tmp_path / "platform-auth.json"
     monkeypatch.setattr(platform_cli, "AUTH_PATH", auth_path)
     monkeypatch.setattr(workspaces, "AUTH_PATH", auth_path)
-    monkeypatch.setenv("STRIX_API_TOKEN", "account-b-token")
+    monkeypatch.setenv("HAVOC_API_TOKEN", "account-b-token")
     platform_cli.save_record(
         {
             "api_token": "account-a-token",
@@ -1871,7 +1871,7 @@ def test_workspaces_use_reports_unknown_workspace(monkeypatch: pytest.MonkeyPatc
 def test_workspaces_use_reports_auth_storage_failure(
     monkeypatch: pytest.MonkeyPatch, capsys: Any
 ) -> None:
-    monkeypatch.delenv("STRIX_API_TOKEN", raising=False)
+    monkeypatch.delenv("HAVOC_API_TOKEN", raising=False)
 
     def fake_request(method: str, path: str, **_kwargs: Any) -> FakeResponse:
         if method == "GET":

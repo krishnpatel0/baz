@@ -240,7 +240,7 @@ def _serve(scenario: _Scenario) -> tuple[HTTPServer, type[_Gateway]]:
 
 @pytest.fixture(autouse=True)
 def _reset_settings(monkeypatch: pytest.MonkeyPatch) -> None:
-    for key in ("STRIX_LLM", "LLM_DISABLE_STREAMING", "LLM_MAX_TOOL_CALLS_PER_TURN"):
+    for key in ("HAVOC_LLM", "LLM_DISABLE_STREAMING", "LLM_MAX_TOOL_CALLS_PER_TURN"):
         monkeypatch.delenv(key, raising=False)
     monkeypatch.setattr(loader, "_cached", None)
     monkeypatch.setattr(loader, "_override", None)

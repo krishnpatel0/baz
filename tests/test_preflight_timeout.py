@@ -76,7 +76,7 @@ def test_preflight_request_fails_after_its_own_timeout_with_a_clear_message() ->
 def test_preflight_model_connection_uses_the_preflight_timeout(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setenv("STRIX_LLM", "openai/gpt-4o")
+    monkeypatch.setenv("HAVOC_LLM", "openai/gpt-4o")
     monkeypatch.setenv("LLM_API_KEY", "sk-test")
     monkeypatch.setenv("LLM_TIMEOUT", "600")
     monkeypatch.setenv("LLM_PREFLIGHT_TIMEOUT", "12")
@@ -96,12 +96,12 @@ def test_preflight_model_connection_uses_the_preflight_timeout(
 def test_warm_up_checks_the_dedupe_model_with_its_own_headers_and_the_preflight_timeout(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setenv("STRIX_LLM", "openai/gpt-4o")
+    monkeypatch.setenv("HAVOC_LLM", "openai/gpt-4o")
     monkeypatch.setenv("LLM_API_KEY", "sk-test")
     monkeypatch.setenv("LLM_EXTRA_HEADERS", '{"X-Main": "1"}')
     monkeypatch.setenv("LLM_TIMEOUT", "600")
     monkeypatch.setenv("LLM_PREFLIGHT_TIMEOUT", "9")
-    monkeypatch.setenv("STRIX_DEDUPE_MODEL", "anthropic/claude-sonnet-4-5")
+    monkeypatch.setenv("HAVOC_DEDUPE_MODEL", "anthropic/claude-sonnet-4-5")
     monkeypatch.setenv("DEDUPE_LLM_EXTRA_HEADERS", '{"X-Dedupe": "1"}')
     _fresh_settings(monkeypatch, tmp_path)
 
@@ -136,10 +136,10 @@ def test_warm_up_checks_the_dedupe_model_with_its_own_headers_and_the_preflight_
 def test_warm_up_checks_each_model_with_its_own_body_fields(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setenv("STRIX_LLM", "openai/gpt-4o")
+    monkeypatch.setenv("HAVOC_LLM", "openai/gpt-4o")
     monkeypatch.setenv("LLM_API_KEY", "sk-test")
     monkeypatch.setenv("LLM_EXTRA_BODY", '{"safety_identifier": "main"}')
-    monkeypatch.setenv("STRIX_DEDUPE_MODEL", "anthropic/claude-sonnet-4-5")
+    monkeypatch.setenv("HAVOC_DEDUPE_MODEL", "anthropic/claude-sonnet-4-5")
     monkeypatch.setenv("DEDUPE_LLM_EXTRA_BODY", '{"service_tier": "flex"}')
     _fresh_settings(monkeypatch, tmp_path)
 

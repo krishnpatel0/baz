@@ -298,7 +298,7 @@ async def run_strix_scan(
     resolved_model = (model or settings.llm.model or "").strip()
     if not resolved_model:
         raise RuntimeError(
-            "No LLM model configured. Set STRIX_LLM env or pass model= to run_strix_scan().",
+            "No LLM model configured. Set HAVOC_LLM env or pass model= to run_strix_scan().",
         )
     if resolved_model != (settings.llm.model or "").strip() and not codex.subscription_model(
         resolved_model

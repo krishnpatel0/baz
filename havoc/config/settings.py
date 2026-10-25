@@ -29,10 +29,10 @@ _BASE_CONFIG = SettingsConfigDict(
 class LlmSettings(BaseSettings):
     model_config = _BASE_CONFIG
 
-    model: str | None = Field(default=None, alias="STRIX_LLM")
+    model: str | None = Field(default=None, alias="HAVOC_LLM")
     api_type: ApiType | None = Field(
         default=None,
-        validation_alias=AliasChoices("STRIX_API_TYPE", "STRIX_FORCE_API"),
+        validation_alias=AliasChoices("HAVOC_API_TYPE", "HAVOC_FORCE_API"),
         description="Force 'responses' or 'chat_completions' API path",
     )
     api_key: str | None = Field(
@@ -60,26 +60,26 @@ class LlmSettings(BaseSettings):
         alias="LLM_EXTRA_BODY",
         repr=False,
     )
-    reasoning_effort: ReasoningEffort = Field(default="high", alias="STRIX_REASONING_EFFORT")
+    reasoning_effort: ReasoningEffort = Field(default="high", alias="HAVOC_REASONING_EFFORT")
     force_required_tool_choice: bool = Field(
         default=False,
-        alias="STRIX_FORCE_REQUIRED_TOOL_CHOICE",
+        alias="HAVOC_FORCE_REQUIRED_TOOL_CHOICE",
     )
     parallel_tool_calls: bool = Field(
         default=False,
-        alias="STRIX_PARALLEL_TOOL_CALLS",
+        alias="HAVOC_PARALLEL_TOOL_CALLS",
     )
     prompt_cache: bool = Field(
         default=True,
-        alias="STRIX_PROMPT_CACHE",
+        alias="HAVOC_PROMPT_CACHE",
     )
     # Providers cache prompts in fixed-size token blocks, so a fully cached prompt
     # can read back up to a block short. 128 covers the largest common size
     # (OpenAI; DeepSeek and GLM use 64, vLLM defaults to 16).
-    cache_block_tokens: int = Field(default=128, ge=1, alias="STRIX_CACHE_BLOCK_TOKENS")
+    cache_block_tokens: int = Field(default=128, ge=1, alias="HAVOC_CACHE_BLOCK_TOKENS")
     openrouter_sticky_sessions: bool = Field(
         default=False,
-        alias="STRIX_OPENROUTER_STICKY_SESSIONS",
+        alias="HAVOC_OPENROUTER_STICKY_SESSIONS",
     )
     disable_streaming: bool = Field(
         default=False,
@@ -107,10 +107,10 @@ class LlmSettings(BaseSettings):
 class DedupeSettings(BaseSettings):
     model_config = _BASE_CONFIG
 
-    model: str | None = Field(default=None, alias="STRIX_DEDUPE_MODEL")
+    model: str | None = Field(default=None, alias="HAVOC_DEDUPE_MODEL")
     reasoning_effort: ReasoningEffort | None = Field(
         default=None,
-        alias="STRIX_DEDUPE_REASONING_EFFORT",
+        alias="HAVOC_DEDUPE_REASONING_EFFORT",
     )
     api_key: str | None = Field(default=None, alias="DEDUPE_LLM_API_KEY", repr=False)
     api_base: str | None = Field(default=None, alias="DEDUPE_LLM_API_BASE")
@@ -136,18 +136,18 @@ class ContextSettings(BaseSettings):
 
     model_config = _BASE_CONFIG
 
-    auto_compact: bool = Field(default=True, alias="STRIX_CONTEXT_AUTO_COMPACT")
-    compact_buffer_tokens: int = Field(default=20_000, gt=0, alias="STRIX_CONTEXT_BUFFER_TOKENS")
-    keep_tokens: int = Field(default=8_000, gt=0, alias="STRIX_CONTEXT_KEEP_TOKENS")
+    auto_compact: bool = Field(default=True, alias="HAVOC_CONTEXT_AUTO_COMPACT")
+    compact_buffer_tokens: int = Field(default=20_000, gt=0, alias="HAVOC_CONTEXT_BUFFER_TOKENS")
+    keep_tokens: int = Field(default=8_000, gt=0, alias="HAVOC_CONTEXT_KEEP_TOKENS")
     fallback_context_tokens: int = Field(
-        default=200_000, gt=0, alias="STRIX_CONTEXT_FALLBACK_TOKENS"
+        default=200_000, gt=0, alias="HAVOC_CONTEXT_FALLBACK_TOKENS"
     )
-    summary_max_tokens: int = Field(default=4_096, gt=0, alias="STRIX_CONTEXT_SUMMARY_TOKENS")
-    tool_output_max_tokens: int = Field(default=8_000, gt=0, alias="STRIX_TOOL_OUTPUT_MAX_TOKENS")
-    tool_output_max_lines: int = Field(default=2_000, gt=0, alias="STRIX_TOOL_OUTPUT_MAX_LINES")
+    summary_max_tokens: int = Field(default=4_096, gt=0, alias="HAVOC_CONTEXT_SUMMARY_TOKENS")
+    tool_output_max_tokens: int = Field(default=8_000, gt=0, alias="HAVOC_TOOL_OUTPUT_MAX_TOKENS")
+    tool_output_max_lines: int = Field(default=2_000, gt=0, alias="HAVOC_TOOL_OUTPUT_MAX_LINES")
     # Floor above the truncation-notice size so a preview always fits.
     tool_output_max_bytes: int = Field(
-        default=50 * 1024, ge=1024, alias="STRIX_TOOL_OUTPUT_MAX_BYTES"
+        default=50 * 1024, ge=1024, alias="HAVOC_TOOL_OUTPUT_MAX_BYTES"
     )
 
 
@@ -156,18 +156,18 @@ class RuntimeSettings(BaseSettings):
 
     image: str = Field(
         default="ghcr.io/usestrix/strix-sandbox:1.3.0",
-        alias="STRIX_IMAGE",
+        alias="HAVOC_IMAGE",
     )
-    backend: str = Field(default="docker", alias="STRIX_RUNTIME_BACKEND")
+    backend: str = Field(default="docker", alias="HAVOC_RUNTIME_BACKEND")
     # Max screenshot/image tool outputs kept live per agent context (0 = none).
-    max_context_images: int = Field(default=3, ge=0, alias="STRIX_MAX_CONTEXT_IMAGES")
+    max_context_images: int = Field(default=3, ge=0, alias="HAVOC_MAX_CONTEXT_IMAGES")
 
 
 class TelemetrySettings(BaseSettings):
     model_config = _BASE_CONFIG
 
-    enabled: bool = Field(default=True, alias="STRIX_TELEMETRY")
-    run_record_timings: bool = Field(default=False, alias="STRIX_RUN_RECORD_TIMINGS")
+    enabled: bool = Field(default=True, alias="HAVOC_TELEMETRY")
+    run_record_timings: bool = Field(default=False, alias="HAVOC_RUN_RECORD_TIMINGS")
 
 
 WebSearchProvider = Literal["auto", "perplexity", "exa"]
@@ -189,17 +189,17 @@ class IntegrationSettings(BaseSettings):
     )
     web_search_provider: WebSearchProvider = Field(
         default="auto",
-        alias="STRIX_WEB_SEARCH_PROVIDER",
+        alias="HAVOC_WEB_SEARCH_PROVIDER",
     )
     exa_search_type: ExaSearchType = Field(
         default="auto",
-        alias="STRIX_EXA_SEARCH_TYPE",
+        alias="HAVOC_EXA_SEARCH_TYPE",
     )
     exa_num_results: int = Field(
         default=5,
         ge=1,
         le=100,
-        alias="STRIX_EXA_NUM_RESULTS",
+        alias="HAVOC_EXA_NUM_RESULTS",
     )
     postman_api_key: str | None = Field(
         default=None,
@@ -214,7 +214,7 @@ class ViewerSettings(BaseSettings):
     # Base URL of the Strix relay the local viewer proxies to for email
     # verification and encrypted report delivery. The browser never talks to
     # the relay directly; the local server is the only caller.
-    app_url: str = Field(default="https://app.strix.ai", alias="STRIX_APP_URL")
+    app_url: str = Field(default="https://app.strix.ai", alias="HAVOC_APP_URL")
 
 
 class Settings(BaseSettings):

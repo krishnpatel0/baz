@@ -738,7 +738,7 @@ _RESPONSES_ENDPOINT = "/v1/responses"
 def resolve_api_type(model_name: str, settings: Settings) -> ApiType:
     """The SDK-native OpenAI route for ``model_name``: Responses or chat completions.
 
-    An explicit ``STRIX_API_TYPE`` wins. Otherwise the model decides: Responses
+    An explicit ``HAVOC_API_TYPE`` wins. Otherwise the model decides: Responses
     when LiteLLM's catalog lists ``/v1/responses`` for it, chat completions for
     everything else.
     """
@@ -919,7 +919,7 @@ def _configure_extra_headers(llm: LlmSettings) -> None:
     them via ``LLM_EXTRA_HEADERS``; they are applied to both routing paths:
     the LiteLLM route (``litellm.headers``) and the SDK-native OpenAI route
     (a default client carrying ``default_headers``), so they take effect
-    regardless of the ``STRIX_LLM`` prefix.
+    regardless of the ``HAVOC_LLM`` prefix.
     """
     headers = llm.extra_headers
     if not headers:

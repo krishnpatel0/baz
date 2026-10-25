@@ -1,4 +1,4 @@
-"""``STRIX_DOCKER_SANDBOX_DEVICES`` passes host devices through to the sandbox container."""
+"""``HAVOC_DOCKER_SANDBOX_DEVICES`` passes host devices through to the sandbox container."""
 
 from __future__ import annotations
 

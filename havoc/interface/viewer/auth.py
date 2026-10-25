@@ -1,7 +1,7 @@
 """Viewer email verification state and the relay client.
 
 The local viewer proxies email verification and encrypted-report delivery to
-the Strix relay (``STRIX_APP_URL``). The browser never talks to the relay
+the Strix relay (``HAVOC_APP_URL``). The browser never talks to the relay
 directly, and the report password generated locally is never sent to it.
 
 State lives in ``~/.strix/viewer-auth.json`` (0600). ``is_verified`` is a local

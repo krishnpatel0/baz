@@ -46,7 +46,7 @@ _background_thread: threading.Thread | None = None
 
 
 def _is_disabled() -> bool:
-    return bool(os.environ.get("STRIX_NO_UPDATE_CHECK")) or any(
+    return bool(os.environ.get("HAVOC_NO_UPDATE_CHECK")) or any(
         os.environ.get(key)
         for key in ("CI", "GITHUB_ACTIONS", "GITLAB_CI", "JENKINS_URL", "BUILDKITE", "CIRCLECI")
     )
