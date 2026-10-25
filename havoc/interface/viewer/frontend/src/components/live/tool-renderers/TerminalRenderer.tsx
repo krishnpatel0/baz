@@ -65,16 +65,16 @@ function cleanOutput(raw: string, command: string = ""): string {
     for (const line of lines) {
       // Skip leading blank lines
       if (filtered.length === 0 && !line.trim()) continue;
-      // Skip [STRIX_N]$ prompt lines
-      if (/^\[STRIX_\d+\]\$\s*/.test(line)) continue;
+      // Skip [HAVOC_N]$ prompt lines
+      if (/^\[HAVOC_\d+\]\$\s*/.test(line)) continue;
       // Skip echoed command (plain)
       if (command && line.trim() === command.trim()) continue;
       // Skip echoed command with $/#/> prefix
       if (command && new RegExp(`^[\\$#>]\\s*${escapeRegex(command.trim())}\\s*$`).test(line)) continue;
       filtered.push(line);
     }
-    // Strip trailing [STRIX_N]$ lines
-    while (filtered.length > 0 && /^\[STRIX_\d+\]\$\s*/.test(filtered[filtered.length - 1])) {
+    // Strip trailing [HAVOC_N]$ lines
+    while (filtered.length > 0 && /^\[HAVOC_\d+\]\$\s*/.test(filtered[filtered.length - 1])) {
       filtered.pop();
     }
     cleaned = filtered.join("\n");

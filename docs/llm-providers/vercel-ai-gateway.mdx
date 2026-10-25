@@ -10,7 +10,7 @@ description: "Configure Strix with models via Vercel AI Gateway"
 Create an [AI Gateway API key](https://vercel.com/docs/ai-gateway/authentication-and-byok), then configure Strix:
 
 ```bash
-export STRIX_LLM="openai/anthropic/claude-opus-5"
+export HAVOC_LLM="openai/anthropic/claude-opus-5"
 export LLM_API_KEY="your-ai-gateway-api-key"
 export LLM_API_BASE="https://ai-gateway.vercel.sh/v1"
 ```
@@ -25,7 +25,7 @@ Use any language model returned by the AI Gateway models endpoint:
 https://ai-gateway.vercel.sh/v1/models
 ```
 
-Prefix its model ID with `openai/` when setting `STRIX_LLM`. For example, the Gateway model ID `anthropic/claude-opus-5` becomes `openai/anthropic/claude-opus-5` in Strix.
+Prefix its model ID with `openai/` when setting `HAVOC_LLM`. For example, the Gateway model ID `anthropic/claude-opus-5` becomes `openai/anthropic/claude-opus-5` in Strix.
 
 ## Get API Key
 

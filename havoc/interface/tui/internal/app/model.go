@@ -42,7 +42,7 @@ type collectionAssembly struct {
 }
 
 // appVersion is the package version string shown on the splash and stats panel.
-// It is set by main from the STRIX_VERSION env var (see go_tui.py), matching
+// It is set by main from the HAVOC_VERSION env var (see go_tui.py), matching
 // Python's get_package_version() which reads the installed "strix-agent" version
 // and falls back to "dev".
 var appVersion = "dev"

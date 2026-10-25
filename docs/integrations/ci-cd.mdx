@@ -41,7 +41,7 @@ security-scan:
   services:
     - docker:dind
   variables:
-    STRIX_LLM: $STRIX_LLM
+    HAVOC_LLM: $HAVOC_LLM
     LLM_API_KEY: $LLM_API_KEY
   script:
     - curl -sSL https://strix.ai/install | bash
@@ -54,7 +54,7 @@ security-scan:
 pipeline {
     agent any
     environment {
-        STRIX_LLM = credentials('strix-llm')
+        HAVOC_LLM = credentials('strix-llm')
         LLM_API_KEY = credentials('llm-api-key')
     }
     stages {

@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	app.SetVersion(os.Getenv("STRIX_VERSION"))
+	app.SetVersion(os.Getenv("HAVOC_VERSION"))
 	render.DetectKittyGraphics()
 	client, err := app.ConnectFromEnvironment()
 	if err != nil {

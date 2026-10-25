@@ -26,7 +26,7 @@ jobs:
 
       - name: Run Security Scan
         env:
-          STRIX_LLM: ${{ secrets.STRIX_LLM }}
+          HAVOC_LLM: ${{ secrets.HAVOC_LLM }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
         run: strix -n -t ./ --scan-mode quick
 ```
@@ -37,7 +37,7 @@ Add these secrets to your repository:
 
 | Secret | Description |
 |--------|-------------|
-| `STRIX_LLM` | Model name (e.g., `openrouter/z-ai/glm-5.3`) |
+| `HAVOC_LLM` | Model name (e.g., `openrouter/z-ai/glm-5.3`) |
 | `LLM_API_KEY` | API key for your LLM provider |
 
 ## Exit Codes

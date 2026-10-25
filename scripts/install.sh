@@ -4,7 +4,7 @@ set -euo pipefail
 
 APP=strix
 REPO="usestrix/strix"
-STRIX_IMAGE="ghcr.io/usestrix/strix-sandbox:1.3.0"
+HAVOC_IMAGE="ghcr.io/usestrix/strix-sandbox:1.3.0"
 
 MUTED='\033[0;2m'
 RED='\033[0;31m'
@@ -186,21 +186,21 @@ check_docker() {
 
     if ! docker info >/dev/null 2>&1; then
         echo -e "${YELLOW}⚠ Docker daemon not running${NC}"
-        echo -e "${MUTED}Please start Docker and run: ${NC}docker pull $STRIX_IMAGE"
+        echo -e "${MUTED}Please start Docker and run: ${NC}docker pull $HAVOC_IMAGE"
         echo ""
         return 1
     fi
 
     echo -e "${MUTED}Checking for sandbox image...${NC}"
-    if docker image inspect "$STRIX_IMAGE" >/dev/null 2>&1; then
+    if docker image inspect "$HAVOC_IMAGE" >/dev/null 2>&1; then
         echo -e "${GREEN}✓ Sandbox image already available${NC}"
     else
         echo -e "${MUTED}Pulling sandbox image (this may take a few minutes)...${NC}"
-        if docker pull "$STRIX_IMAGE"; then
+        if docker pull "$HAVOC_IMAGE"; then
             echo -e "${GREEN}✓ Sandbox image pulled successfully${NC}"
         else
             echo -e "${YELLOW}⚠ Failed to pull sandbox image${NC}"
-            echo -e "${MUTED}You can pull it manually later: ${NC}docker pull $STRIX_IMAGE"
+            echo -e "${MUTED}You can pull it manually later: ${NC}docker pull $HAVOC_IMAGE"
         fi
     fi
     return 0
@@ -337,7 +337,7 @@ echo -e "${MUTED}To get started:${NC}"
 echo ""
 echo -e "  ${CYAN}1.${NC} Set your environment:"
 echo -e "     ${MUTED}export LLM_API_KEY='your-api-key'${NC}"
-echo -e "     ${MUTED}export STRIX_LLM='openai/gpt-5.4'${NC}"
+echo -e "     ${MUTED}export HAVOC_LLM='openai/gpt-5.4'${NC}"
 echo ""
 echo -e "  ${CYAN}2.${NC} Run a penetration test:"
 echo -e "     ${MUTED}strix --target https://example.com${NC}"

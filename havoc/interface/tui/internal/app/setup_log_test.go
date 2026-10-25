@@ -18,7 +18,7 @@ func TestSetupLogCollapsesRepeatedAttempts(t *testing.T) {
 	m.snapshot.SetupMode = true
 	for range 4 {
 		m.setupMsg("Verifying model connection...", render.Col(amber))
-		m.setupMsg("No model configured. Set STRIX_LLM first.", render.Col(red))
+		m.setupMsg("No model configured. Set HAVOC_LLM first.", render.Col(red))
 	}
 	if got := len(m.setupLog); got != 2 {
 		t.Fatalf("setup log holds %d lines after 4 identical attempts, want 2: %#v", got, m.setupLog)
@@ -51,7 +51,7 @@ func TestRepeatedSetupStartFailureLogsOnce(t *testing.T) {
 			Command: "setup.start",
 			Error: &protocol.CommandError{
 				Code:    "invalid_state",
-				Message: "No model configured. Set STRIX_LLM first.",
+				Message: "No model configured. Set HAVOC_LLM first.",
 			},
 		})
 		if err != nil {

@@ -446,7 +446,7 @@ func (m Model) setupSummaryView(width int) string {
 		}
 	} else {
 		chips = append(chips, render.Col(amber).Render("○ no model")+
-			render.Dim().Render(" · set STRIX_LLM or configure one in your config"))
+			render.Dim().Render(" · set HAVOC_LLM or configure one in your config"))
 	}
 	if m.snapshot.MaxBudgetUSD != nil {
 		chips = append(chips, render.Dim().Render(fmt.Sprintf("$%.2f budget", *m.snapshot.MaxBudgetUSD)))
