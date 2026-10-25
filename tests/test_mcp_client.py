@@ -1109,8 +1109,8 @@ async def test_call_mcp_replaces_images_for_a_text_only_model() -> None:
 def test_agent_carries_exactly_the_generic_mcp_tools_regardless_of_connections() -> None:
     """No matter how many MCP connections a run makes, an agent's tool list gains
     exactly the generic MCP tools and never a per-connection provider tool."""
-    root = factory.build_strix_agent(is_root=True)
-    child = factory.build_strix_agent(is_root=False)
+    root = factory.build_havoc_agent(is_root=True)
+    child = factory.build_havoc_agent(is_root=False)
 
     root_names = [t.name for t in root.tools]
     child_names = [t.name for t in child.tools]
@@ -1138,7 +1138,7 @@ def test_agent_carries_exactly_the_generic_mcp_tools_regardless_of_connections()
     # The tool list does not grow with connection count: it is the same set of
     # names whether or not any connection exists, because connections never
     # contribute tools.
-    assert root_names == [t.name for t in factory.build_strix_agent(is_root=True).tools]
+    assert root_names == [t.name for t in factory.build_havoc_agent(is_root=True).tools]
 
 
 # --- prompt guidance replaces the old per-connection inventory ---------------

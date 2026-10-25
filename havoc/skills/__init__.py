@@ -8,7 +8,7 @@ from typing import TypeGuard
 import yaml
 from jinja2 import Environment, StrictUndefined
 
-from havoc.utils.resource_paths import get_strix_resource_path
+from havoc.utils.resource_paths import get_havoc_resource_path
 
 
 logger = logging.getLogger(__name__)
@@ -59,7 +59,7 @@ def registered_skill_dirs() -> tuple[Path, ...]:
 def skill_search_dirs() -> tuple[Path, ...]:
     """All existing skill roots, highest precedence first (built-in last)."""
     roots = [d for d in registered_skill_dirs() if d.is_dir()]
-    builtin = get_strix_resource_path("skills")
+    builtin = get_havoc_resource_path("skills")
     if builtin.is_dir():
         roots.append(builtin)
     return tuple(roots)
@@ -253,7 +253,7 @@ _LOADED_SKILLS: set[str] = set()
 
 
 def _track_skill_loaded(skill_name: str, file_path: Path) -> None:
-    builtin = get_strix_resource_path("skills")
+    builtin = get_havoc_resource_path("skills")
     if not file_path.is_relative_to(builtin):
         skill_name = "custom"
     _LOADED_SKILLS.add(skill_name)

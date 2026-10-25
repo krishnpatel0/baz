@@ -8,7 +8,7 @@ from typing import Any
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from havoc.skills import get_available_skills, load_skills, skill_search_dirs
-from havoc.utils.resource_paths import get_strix_resource_path
+from havoc.utils.resource_paths import get_havoc_resource_path
 
 
 logger = logging.getLogger(__name__)
@@ -96,7 +96,7 @@ def render_system_prompt(
     prompt is an identical prefix across runs and can be served from cache.
     """
     try:
-        prompt_dir = get_strix_resource_path("agents", _PROMPT_DIRNAME)
+        prompt_dir = get_havoc_resource_path("agents", _PROMPT_DIRNAME)
         loader_dirs = [prompt_dir, *skill_search_dirs()]
         env = Environment(
             loader=FileSystemLoader(loader_dirs),
@@ -160,7 +160,7 @@ def render_system_prompt(
 
 def render_scope_prompt(system_prompt_context: dict[str, Any] | None) -> str:
     """Render only the per-run scope block that ends the system prompt."""
-    prompt_dir = get_strix_resource_path("agents", _PROMPT_DIRNAME)
+    prompt_dir = get_havoc_resource_path("agents", _PROMPT_DIRNAME)
     env = Environment(
         loader=FileSystemLoader(prompt_dir),
         autoescape=select_autoescape(enabled_extensions=(), default_for_string=False),

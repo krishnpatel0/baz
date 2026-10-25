@@ -1,4 +1,4 @@
-"""Tests for graceful handling of persistent RateLimitError in run_strix_scan."""
+"""Tests for graceful handling of persistent RateLimitError in run_havoc_scan."""
 
 from __future__ import annotations
 
@@ -68,7 +68,7 @@ async def test_persistent_rate_limit_stops_gracefully(
     monkeypatch.setattr(runner, "build_root_task", lambda _scan_config: "task")
     monkeypatch.setattr(runner, "build_scope_context", lambda _scan_config: "")
     monkeypatch.setattr(runner, "make_model_settings", lambda *_args, **_kwargs: ModelSettings())
-    monkeypatch.setattr(runner, "build_strix_agent", lambda **_kwargs: object())
+    monkeypatch.setattr(runner, "build_havoc_agent", lambda **_kwargs: object())
     monkeypatch.setattr(runner, "make_child_factory", lambda **_kwargs: lambda **_k: object())
     monkeypatch.setattr(runner, "open_agent_session", lambda _root_id, _db: object())
 
@@ -80,7 +80,7 @@ async def test_persistent_rate_limit_stops_gracefully(
     coordinator = AgentCoordinator()
 
     with caplog.at_level(logging.WARNING):
-        result = await runner.run_strix_scan(
+        result = await runner.run_havoc_scan(
             scan_config={"targets": [], "scan_mode": "deep"},
             scan_id="scan-test",
             image="img",

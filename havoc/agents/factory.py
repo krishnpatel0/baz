@@ -150,7 +150,7 @@ def _format_tool_error(exc: Exception) -> str:
 
 def _with_bounded_result(tool: FunctionTool) -> FunctionTool:
     """Cap a tool's result size before it enters history (idempotent)."""
-    if getattr(tool, "_strix_bounded", False):
+    if getattr(tool, "_havoc_bounded", False):
         return tool
     invoke_tool = tool.on_invoke_tool
 
@@ -158,7 +158,7 @@ def _with_bounded_result(tool: FunctionTool) -> FunctionTool:
         return await _bound_result(await invoke_tool(ctx, raw_input))
 
     tool.on_invoke_tool = invoke
-    tool._strix_bounded = True  # type: ignore[attr-defined]
+    tool._havoc_bounded = True  # type: ignore[attr-defined]
     return tool
 
 
@@ -262,7 +262,7 @@ def _coerce_arguments(raw_input: str, schema: dict[str, Any], *, nullish: bool =
 
 
 def _with_coerced_arguments(tool: FunctionTool) -> FunctionTool:
-    if getattr(tool, "_strix_coerced", False):
+    if getattr(tool, "_havoc_coerced", False):
         return tool
     invoke_tool = tool.on_invoke_tool
     schema = tool.params_json_schema
@@ -276,7 +276,7 @@ def _with_coerced_arguments(tool: FunctionTool) -> FunctionTool:
         return await invoke_tool(ctx, _coerce_arguments(raw_input, schema, nullish=nullish))
 
     tool.on_invoke_tool = invoke
-    tool._strix_coerced = True  # type: ignore[attr-defined]
+    tool._havoc_coerced = True  # type: ignore[attr-defined]
     return tool
 
 
@@ -679,7 +679,7 @@ _BASE_TOOLS: tuple[Tool, ...] = (
 
 # Extra tools registered for scan agents. Mirrors
 # ``strix.runtime.backends.register_backend``: register before the first
-# ``build_strix_agent`` call and every agent (root + children) gets them.
+# ``build_havoc_agent`` call and every agent (root + children) gets them.
 _EXTRA_TOOLS: list[Tool] = []
 
 
@@ -719,7 +719,7 @@ def registered_agent_tools() -> tuple[Tool, ...]:
     return tuple(_EXTRA_TOOLS)
 
 
-def build_strix_agent(
+def build_havoc_agent(
     *,
     name: str = "agent",
     skills: list[str] | None = None,
@@ -850,7 +850,7 @@ def make_child_factory(
     """
 
     def _factory(*, name: str, skills: list[str]) -> SandboxAgent[Any]:
-        return build_strix_agent(
+        return build_havoc_agent(
             name=name,
             skills=skills,
             is_root=False,

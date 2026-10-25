@@ -15,7 +15,7 @@ from havoc.skills import (
     skill_turn_limit,
     validate_requested_skills,
 )
-from havoc.utils.resource_paths import get_strix_resource_path
+from havoc.utils.resource_paths import get_havoc_resource_path
 
 
 @pytest.fixture(autouse=True)
@@ -41,7 +41,7 @@ def _write_root_skill(root: Path, name: str, body: str) -> None:
 
 def test_no_registration_leaves_builtin_only() -> None:
     assert registered_skill_dirs() == ()
-    builtin = get_strix_resource_path("skills")
+    builtin = get_havoc_resource_path("skills")
     assert skill_search_dirs() == (builtin,)
     assert {"nmap", "subfinder"}.issubset(
         {skill["name"] for skill in get_available_skills()["tooling"]}

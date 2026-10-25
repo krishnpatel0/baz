@@ -63,51 +63,51 @@ def parse_arguments() -> argparse.Namespace:
         epilog="""
 Examples:
   # Web application penetration test
-  strix --target https://example.com
+  .havoc/--target https://example.com
 
   # GitHub repository analysis
-  strix --target https://github.com/user/repo
-  strix --target git@github.com:user/repo.git
+  .havoc/--target https://github.com/user/repo
+  .havoc/--target git@github.com:user/repo.git
 
   # Local code analysis
-  strix --target ./my-project
+  .havoc/--target ./my-project
 
   # API spec test (OpenAPI/Swagger file or Postman collection export)
-  strix --target ./openapi.yaml --target https://api.example.com
-  strix --target ./collection.postman_collection.json
+  .havoc/--target ./openapi.yaml --target https://api.example.com
+  .havoc/--target ./collection.postman_collection.json
 
   # Postman collection pulled live by id (needs POSTMAN_API_KEY); optional environment
-  strix --target postman://<collection-uuid> --target https://api.example.com
-  strix --target "postman://<collection-uuid>?env=<environment-uuid>"
+  .havoc/--target postman://<collection-uuid> --target https://api.example.com
+  .havoc/--target "postman://<collection-uuid>?env=<environment-uuid>"
 
   # Domain penetration test
-  strix --target example.com
+  .havoc/--target example.com
 
   # IP address penetration test
-  strix --target 192.168.1.42
+  .havoc/--target 192.168.1.42
 
   # Multiple targets (e.g., white-box testing with source and deployed app)
-  strix --target https://github.com/user/repo --target https://example.com
-  strix --target ./my-project --target https://staging.example.com --target https://prod.example.com
+  .havoc/--target https://github.com/user/repo --target https://example.com
+  .havoc/--target ./my-project --target https://staging.example.com --target https://prod.example.com
 
   # Targets from a file, one target per non-empty, non-comment line
-  strix --target-list ./targets.txt
+  .havoc/--target-list ./targets.txt
 
   # Custom instructions (inline)
-  strix --target example.com --instruction "Focus on authentication vulnerabilities"
+  .havoc/--target example.com --instruction "Focus on authentication vulnerabilities"
 
   # Custom instructions (from file)
-  strix --target example.com --instruction-file ./instructions.txt
-  strix --target https://app.com --instruction-file /path/to/detailed_instructions.md
+  .havoc/--target example.com --instruction-file ./instructions.txt
+  .havoc/--target https://app.com --instruction-file /path/to/detailed_instructions.md
 
   # Extra files placed in the sandbox workspace
-  strix --target ./my-project --workspace-file ./wordlist.txt
-  strix --target https://app.com --workspace-file ./openapi.yaml:specs/openapi.yaml
+  .havoc/--target ./my-project --workspace-file ./wordlist.txt
+  .havoc/--target https://app.com --workspace-file ./openapi.yaml:specs/openapi.yaml
 
 Strix Cloud:
-  strix cloud login
-  strix cloud scans start --source . --yes --wait
-  strix cloud                      # list every cloud resource
+  .havoc/cloud login
+  .havoc/cloud scans start --source . --yes --wait
+  .havoc/cloud                      # list every cloud resource
 
   Run a pentest in Strix Cloud     https://app.strix.ai
   Try Strix Enterprise             https://strix.ai/demo
@@ -118,13 +118,13 @@ Strix Cloud:
         "-v",
         "--version",
         action="version",
-        version=f"strix {get_version()}",
+        version=f".havoc/{get_version()}",
     )
 
     parser.add_argument(
         "--update",
         action="store_true",
-        help="Update strix to the latest version and exit. Self-updates the "
+        help="Update .havoc/to the latest version and exit. Self-updates the "
         "standalone binary install; for pip/pipx/uv installs, prints the "
         "matching upgrade command instead.",
     )
@@ -246,14 +246,14 @@ Strix Cloud:
     parser.add_argument(
         "--config",
         type=str,
-        help="Path to a custom config file (JSON) to use instead of ~/.strix/cli-config.json",
+        help="Path to a custom config file (JSON) to use instead of ~/.havoc/cli-config.json",
     )
 
     parser.add_argument(
         "--mcp-config",
         type=str,
         metavar="PATH",
-        help="Path to an MCP servers JSON file to use instead of ~/.strix/mcp-servers.json.",
+        help="Path to an MCP servers JSON file to use instead of ~/.havoc/mcp-servers.json.",
     )
 
     parser.add_argument(
@@ -306,7 +306,7 @@ Strix Cloud:
         const="",
         metavar="RUN_NAME",
         help=(
-            "Resume a prior scan by its run name (the dir under ./strix_runs/). "
+            "Resume a prior scan by its run name (the dir under ./havoc_runs/). "
             "Picks up the root + every non-terminal subagent's full LLM history "
             "and agent topology. Skips fresh run-name generation. Without a "
             "name, opens a picker of the prior runs."

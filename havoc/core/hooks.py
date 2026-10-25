@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 LLM_TURN_KEY = "llm_turn"
-# ``run_strix_scan(subagent_turn_limits=...)``, and the limit it gives one sub-agent.
+# ``run_havoc_scan(subagent_turn_limits=...)``, and the limit it gives one sub-agent.
 SUBAGENT_TURN_LIMITS_KEY = "subagent_turn_limits"
 TURN_LIMIT_KEY = "turn_limit"
 _TURN_LIMIT_WARN_BEFORE = 10

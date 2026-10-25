@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any, TextIO
 from havoc.config import load_settings, persist_current
 from havoc.core.agents import AgentCoordinator
 from havoc.core.hooks import BudgetExceededError
-from havoc.core.runner import run_strix_scan
+from havoc.core.runner import run_havoc_scan
 from havoc.interface.scan_setup import (
     build_targets_info,
     preflight_model_connection,
@@ -38,7 +38,7 @@ from havoc.interface.tui.sidecar import (
 from havoc.interface.utils import read_workspace_files
 from havoc.report.state import ReportState, set_global_report_state
 from havoc.telemetry import report_error, set_scan_phase
-from havoc.utils.resource_paths import get_strix_resource_path
+from havoc.utils.resource_paths import get_havoc_resource_path
 
 
 if TYPE_CHECKING:
@@ -215,7 +215,7 @@ class GoTuiRuntime:
     async def _run_scan(self) -> None:
         image = str(load_settings().runtime.image or "strix-sandbox:latest")
         try:
-            await run_strix_scan(
+            await run_havoc_scan(
                 scan_config=self.scan_config,
                 scan_id=self.scan_config["run_name"],
                 image=image,
@@ -386,7 +386,7 @@ class GoTuiRuntime:
         # current source is the deterministic development choice.
         if (source / "go.mod").is_file() and shutil.which("go"):
             return ["go", "run", "./cmd/strix-tui"]
-        packaged = get_strix_resource_path("bin", tui_executable())
+        packaged = get_havoc_resource_path("bin", tui_executable())
         if packaged.is_file():
             return [str(packaged)]
         raise RuntimeError(

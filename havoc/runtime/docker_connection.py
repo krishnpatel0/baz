@@ -17,7 +17,7 @@ DEFAULT_CONTEXT = "default"
 
 @dataclass(frozen=True)
 class DockerEndpoint:
-    """Where strix talks to Docker and how that address was chosen."""
+    """Where .havoc/talks to Docker and how that address was chosen."""
 
     host: str | None
     source: str

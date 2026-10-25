@@ -61,10 +61,10 @@ logger = logging.getLogger(__name__)
 
 _ROOT_SUBCOMMAND_HELP = """
 Additional commands:
-  strix cloud ...          Use the managed Strix platform
-  strix auth ...           Manage model-subscription sign-in
-  strix view [RUN]         View a completed or running scan
-  strix completions SHELL  Generate zsh, bash, or fish tab completion
+  .havoc/cloud ...          Use the managed Strix platform
+  .havoc/auth ...           Manage model-subscription sign-in
+  .havoc/view [RUN]         View a completed or running scan
+  .havoc/completions SHELL  Generate zsh, bash, or fish tab completion
 """
 
 
@@ -103,7 +103,7 @@ def _subscription_error_hint(exc: BaseException) -> str | None:
     ):
         return (
             "Your ChatGPT sign-in has expired or was revoked. Sign in again:\n"
-            "  strix auth login chatgpt"
+            "  .havoc/auth login chatgpt"
         )
     return None
 
@@ -229,7 +229,7 @@ def display_completion_message(args: argparse.Namespace, results_path: Path) -> 
     view_text.append("\n")
     view_text.append("View", style="dim")
     view_text.append("    ")
-    view_text.append(f"strix view {args.run_name}", style="#22c55e")
+    view_text.append(f".havoc/view {args.run_name}", style="#22c55e")
     panel_parts.extend(["\n", view_text])
 
     if not scan_completed:
@@ -237,7 +237,7 @@ def display_completion_message(args: argparse.Namespace, results_path: Path) -> 
         resume_text.append("\n")
         resume_text.append("Resume", style="dim")
         resume_text.append("  ")
-        resume_text.append(f"strix --resume {args.run_name}", style="#22c55e")
+        resume_text.append(f".havoc/--resume {args.run_name}", style="#22c55e")
         panel_parts.extend(["\n", resume_text])
 
     panel_content = Text.assemble(*panel_parts)
@@ -441,7 +441,7 @@ def main() -> None:
             Console().print(_ROOT_SUBCOMMAND_HELP.strip(), markup=False)
             raise SystemExit(exc.code) from None
 
-    # `strix view [<run>]` is a viewer-only subcommand, dispatched before the
+    # `.havoc/view [<run>]` is a viewer-only subcommand, dispatched before the
     # scan argument parser (which requires a target) and before any scan setup.
     if len(sys.argv) > 1 and sys.argv[1] == "view":
         from havoc.interface.viewer.cli import run_view
@@ -449,7 +449,7 @@ def main() -> None:
         run_view(sys.argv[2:])
         return
 
-    # `strix auth …` manages model-subscription sign-in and exits; it needs no
+    # `.havoc/auth …` manages model-subscription sign-in and exits; it needs no
     # target, Docker, or scan setup.
     if len(sys.argv) > 1 and sys.argv[1] == "auth":
         from havoc.interface.auth_cli import run_auth
@@ -462,7 +462,7 @@ def main() -> None:
 
         sys.exit(run_completions(sys.argv[2:]))
 
-    # `strix cloud …` drives the managed platform (app.strix.ai) and exits;
+    # `.havoc/cloud …` drives the managed platform (app.strix.ai) and exits;
     # it needs no target, Docker, or scan setup.
     if len(sys.argv) > 1 and sys.argv[1] == "cloud":
         from havoc.interface.cloud import run_cloud

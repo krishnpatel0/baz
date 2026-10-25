@@ -16,7 +16,7 @@ from agents import RunConfig
 from agents.sandbox import SandboxRunConfig
 from openai import RateLimitError
 
-from havoc.agents.factory import build_strix_agent, make_child_factory
+from havoc.agents.factory import build_havoc_agent, make_child_factory
 from havoc.agents.prompt import render_scope_prompt, render_system_prompt
 from havoc.config import codex, load_settings
 from havoc.config.models import (
@@ -209,7 +209,7 @@ def _compose_root_instructions_override(
     )
 
 
-async def run_strix_scan(
+async def run_havoc_scan(
     *,
     scan_config: dict[str, Any],
     scan_id: str | None = None,
@@ -252,7 +252,7 @@ async def run_strix_scan(
     it. ``coordinator.pause_budget()`` parks a running scan the same way.
     ``mcp_connection_requests`` supplies the run's MCP connections from any
     source: when given, the engine connects those requests; when ``None`` (the
-    command-line default) it reads ``~/.strix/mcp-servers.json`` itself. Either
+    command-line default) it reads ``~/.havoc/mcp-servers.json`` itself. Either
     way the engine does the connecting, so the caller passes inert configs plus
     metadata and never live sessions.
     ``root_finish_tool`` is the tool the root agent ends the run with.
@@ -298,7 +298,7 @@ async def run_strix_scan(
     resolved_model = (model or settings.llm.model or "").strip()
     if not resolved_model:
         raise RuntimeError(
-            "No LLM model configured. Set HAVOC_LLM env or pass model= to run_strix_scan().",
+            "No LLM model configured. Set HAVOC_LLM env or pass model= to run_havoc_scan().",
         )
     if resolved_model != (settings.llm.model or "").strip() and not codex.subscription_model(
         resolved_model
@@ -454,7 +454,7 @@ async def run_strix_scan(
         # per-run registry. The connections are source-agnostic: a caller
         # (the SaaS/pro product) can supply them as mcp_connection_requests, and
         # when it does not the command-line path reads them from
-        # ~/.strix/mcp-servers.json here. Either way one shared engine routine
+        # ~/.havoc/mcp-servers.json here. Either way one shared engine routine
         # does the connecting and populating. Nothing is registered as an agent
         # tool: every agent reaches these connections on demand through the
         # list_mcps / describe_mcp / call_mcp tools, guided by brief static prompt
@@ -523,7 +523,7 @@ async def run_strix_scan(
             coverage_tools=coverage_tools,
         )
 
-        root_agent = build_strix_agent(
+        root_agent = build_havoc_agent(
             name="Root Agent",
             skills=skills,
             is_root=True,
@@ -680,7 +680,7 @@ async def run_strix_scan(
     except RateLimitError as exc:
         logger.warning(
             "Scan %s stopped: persistent rate limit from the LLM provider (%s). "
-            "Resume with 'strix --resume %s' once the limit clears.",
+            "Resume with .havoc/--resume %s' once the limit clears.",
             scan_id,
             exc,
             scan_id,

@@ -1,4 +1,4 @@
-"""Read the open-source user's MCP servers from ``~/.strix/mcp-servers.json``.
+"""Read the open-source user's MCP servers from ``~/.havoc/mcp-servers.json``.
 
 An open-source user lists the MCP servers they want the agent to reach in a
 small JSON file. Strix reads it at the start of a run and connects to each
@@ -102,7 +102,7 @@ def load_user_mcp_configs(path: Path | None = None) -> list[McpConnectionConfig]
     """Load MCP connection configs from the user's JSON file.
 
     The path is ``path`` if given, else ``$HAVOC_MCP_CONFIG``, else
-    ``~/.strix/mcp-servers.json``. The file is a JSON list of server entries.
+    ``~/.havoc/mcp-servers.json``. The file is a JSON list of server entries.
     A missing file returns ``[]``; an unreadable or non-list file is logged and
     returns ``[]``; individual entries that fail validation are logged and
     skipped. Connections sharing a name are de-duplicated (first wins), and an

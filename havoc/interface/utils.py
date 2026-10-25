@@ -1612,7 +1612,7 @@ def check_docker_connection() -> Any:
         error_text.append(f"Cannot connect to Docker at {exc.endpoint.label}.\n", style="white")
         error_text.append(f"{exc.detail}\n\n", style="dim red")
         error_text.append(
-            "Make sure Docker is running. If `docker info` works in this shell, strix uses "
+            "Make sure Docker is running. If `docker info` works in this shell, .havoc/uses "
             "the same daemon. Otherwise set DOCKER_HOST.\n",
             style="white",
         )

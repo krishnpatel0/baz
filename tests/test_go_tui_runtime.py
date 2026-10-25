@@ -46,7 +46,7 @@ def test_binary_command_prefers_packaged_sidecar(
     sidecar = tmp_path / "strix-tui"
     sidecar.write_text("binary")
     monkeypatch.setattr(go_tui, "tui_source_dir", lambda: tmp_path / "tui-src")
-    monkeypatch.setattr(go_tui, "get_strix_resource_path", lambda *_parts: sidecar)
+    monkeypatch.setattr(go_tui, "get_havoc_resource_path", lambda *_parts: sidecar)
     monkeypatch.setattr(
         shutil,
         "which",
@@ -66,7 +66,7 @@ def test_binary_command_prefers_current_source_over_packaged_sidecar(
     sidecar = tmp_path / "strix-tui"
     sidecar.write_text("stale")
     monkeypatch.setattr(go_tui, "tui_source_dir", lambda: tmp_path / "tui-src")
-    monkeypatch.setattr(go_tui, "get_strix_resource_path", lambda *_parts: sidecar)
+    monkeypatch.setattr(go_tui, "get_havoc_resource_path", lambda *_parts: sidecar)
     monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/go" if name == "go" else None)
 
     assert GoTuiRuntime.binary_command() == ["go", "run", "./cmd/strix-tui"]
@@ -76,7 +76,7 @@ def test_binary_command_reports_missing_sidecar(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Any,
 ) -> None:
-    monkeypatch.setattr(go_tui, "get_strix_resource_path", lambda *_parts: tmp_path / "missing")
+    monkeypatch.setattr(go_tui, "get_havoc_resource_path", lambda *_parts: tmp_path / "missing")
     monkeypatch.setattr(shutil, "which", lambda _name: None)
     monkeypatch.setattr(go_tui, "tui_source_dir", lambda: tmp_path / "tui-src")
 
@@ -88,7 +88,7 @@ def test_binary_command_ignores_unconstrained_path_sidecar(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Any,
 ) -> None:
-    monkeypatch.setattr(go_tui, "get_strix_resource_path", lambda *_parts: tmp_path / "missing")
+    monkeypatch.setattr(go_tui, "get_havoc_resource_path", lambda *_parts: tmp_path / "missing")
     monkeypatch.setattr(go_tui, "tui_source_dir", lambda: tmp_path / "tui-src")
     monkeypatch.setattr(shutil, "which", lambda _name: "/untrusted/path/strix-tui")
 
@@ -868,7 +868,7 @@ async def test_scan_passes_max_turns_and_budget(monkeypatch: pytest.MonkeyPatch)
         "load_settings",
         lambda: SimpleNamespace(runtime=SimpleNamespace(image="test-image")),
     )
-    monkeypatch.setattr(go_tui, "run_strix_scan", run_scan)
+    monkeypatch.setattr(go_tui, "run_havoc_scan", run_scan)
 
     await runtime._run_scan()
 

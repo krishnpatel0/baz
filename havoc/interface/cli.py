@@ -14,7 +14,7 @@ from rich.text import Text
 
 from havoc.config import load_settings
 from havoc.config.settings import DEFAULT_MAX_TURNS
-from havoc.core.runner import run_strix_scan
+from havoc.core.runner import run_havoc_scan
 from havoc.report.state import ReportState, set_global_report_state
 from havoc.runtime import session_manager
 
@@ -33,7 +33,7 @@ def _resolve_sandbox_image() -> str:
     image = load_settings().runtime.image
     if not image:
         raise RuntimeError(
-            "strix_image is not configured. Set it in ~/.strix/cli-config.json.",
+            "strix_image is not configured. Set it in ~/.havoc/cli-config.json.",
         )
     return image
 
@@ -58,7 +58,7 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
     results_text = Text()
     results_text.append("Output", style="dim")
     results_text.append("  ")
-    results_text.append(f"strix_runs/{args.run_name}", style="#60a5fa")
+    results_text.append(f"havoc_runs/{args.run_name}", style="#60a5fa")
 
     note_text = Text()
     note_text.append("\n\n", style="dim")
@@ -216,7 +216,7 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
                     len(scan_config.get("targets") or []),
                     bool(getattr(args, "interactive", False)),
                 )
-                await run_strix_scan(
+                await run_havoc_scan(
                     scan_config=scan_config,
                     scan_id=args.run_name,
                     image=_resolve_sandbox_image(),

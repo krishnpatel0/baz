@@ -1,9 +1,9 @@
-"""Update notifications and self-update for the strix CLI.
+"""Update notifications and self-update for the .havoc/CLI.
 
 Follows the pattern used by tools like gh, uv, and pip: a background,
 rate-limited (once per 24h) check against the release source, a cached
-result in ``~/.strix``, a non-intrusive notice with the upgrade command
-for the detected install method, and a ``strix --update`` self-update
+result in ``~/.havoc``, a non-intrusive notice with the upgrade command
+for the detected install method, and a ``.havoc/--update`` self-update
 path for the standalone binary install.
 """
 
@@ -70,7 +70,7 @@ def get_install_method() -> str:
 def get_upgrade_command(method: str | None = None) -> str:
     method = method or get_install_method()
     commands = {
-        "binary": "strix --update",
+        "binary": ".havoc/--update",
         "pipx": "pipx upgrade strix-agent",
         "uv": "uv tool upgrade strix-agent",
         "pip": "pip install --upgrade strix-agent",
@@ -209,7 +209,7 @@ def notify_update(console: Console) -> None:
     if not latest:
         return
     console.print(
-        f"[#eab308]A new version of strix is available:[/] "
+        f"[#eab308]A new version of .havoc/is available:[/] "
         f"[dim]{get_version()}[/] [dim]→[/] [bold #22c55e]{latest}[/]"
         f"  [dim]·[/]  [#60a5fa]{get_upgrade_command()}[/]"
     )
@@ -231,21 +231,21 @@ def run_package_upgrade(console: Console, method: str) -> bool:
             f"Run it manually: [#60a5fa]{get_upgrade_command(method)}[/]"
         )
         return False
-    console.print("[#22c55e]✓ strix updated — restart the scan to use the new version[/]")
+    console.print("[#22c55e]✓ .havoc/updated — restart the scan to use the new version[/]")
     return True
 
 
 def prompt_update_if_available(console: Console) -> bool:
     """Offer an interactive update before a scan starts.
 
-    Returns True if strix was updated (caller should re-exec / exit).
+    Returns True if .havoc/was updated (caller should re-exec / exit).
     """
     latest = get_available_update()
     if not latest or not sys.stdin.isatty() or not sys.stdout.isatty():
         return False
     console.print()
     console.print(
-        f"[#eab308]A new version of strix is available:[/] "
+        f"[#eab308]A new version of .havoc/is available:[/] "
         f"[dim]{get_version()}[/] [dim]→[/] [bold #22c55e]{latest}[/]"
     )
     console.print(
@@ -387,19 +387,19 @@ def self_update(console: Console | None = None, version: str | None = None) -> b
     if not is_binary_install():
         method = get_install_method()
         console.print(
-            f"[#eab308]This strix was installed via {method};[/] "
+            f"[#eab308]This .havoc/was installed via {method};[/] "
             f"upgrade it with: [#60a5fa]{get_upgrade_command(method)}[/]"
         )
         return False
 
     latest = version or _fetch_latest_version()
     if not latest:
-        console.print("[bold red]Could not determine the latest strix version.[/]")
+        console.print("[bold red]Could not determine the latest .havoc/version.[/]")
         return False
 
     current = get_version()
     if current != "unknown" and not _is_newer(latest, current):
-        console.print(f"[#22c55e]strix {current} is already the latest version.[/]")
+        console.print(f"[#22c55e].havoc/{current} is already the latest version.[/]")
         return True
 
     target = _release_target()
@@ -422,5 +422,5 @@ def self_update(console: Console | None = None, version: str | None = None) -> b
         return False
 
     _write_cache(latest_version=latest, checked_at=time.time())
-    console.print(f"[#22c55e]✓ Updated strix to {latest}[/]")
+    console.print(f"[#22c55e]✓ Updated .havoc/to {latest}[/]")
     return True
