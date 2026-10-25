@@ -27,7 +27,7 @@ from havoc.tools.mcp.config import McpConnectionConfig
 logger = logging.getLogger(__name__)
 
 
-_DEFAULT_PATH: Path = Path.home() / ".strix" / "mcp-servers.json"
+_DEFAULT_PATH: Path = Path.home() / ".havoc" / "mcp-servers.json"
 _PATH_ENV_VAR = "HAVOC_MCP_CONFIG"
 # Per-run selection, set by the --mcp-server / --mcp-exclude CLI flags. Each is a
 # comma-separated list of connection names.

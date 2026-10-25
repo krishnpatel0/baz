@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-_DEFAULT_PATH: Path = Path.home() / ".strix" / "cli-config.json"
+_DEFAULT_PATH: Path = Path.home() / ".havoc" / "cli-config.json"
 _override: Path | None = None
 _cached: Settings | None = None
 

@@ -155,7 +155,7 @@ class RuntimeSettings(BaseSettings):
     model_config = _BASE_CONFIG
 
     image: str = Field(
-        default="ghcr.io/usestrix/strix-sandbox:1.3.0",
+        default="ghcr.io/HAVoc/havoc-sandbox:1.3.0",
         alias="HAVOC_IMAGE",
     )
     backend: str = Field(default="docker", alias="HAVOC_RUNTIME_BACKEND")

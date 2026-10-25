@@ -35,12 +35,12 @@ from havoc.telemetry._common import get_version
 
 logger = logging.getLogger(__name__)
 
-GITHUB_REPO = "usestrix/strix"
-PYPI_PACKAGE = "strix-agent"
+GITHUB_REPO = "HAVoc/havoc"
+PYPI_PACKAGE = "havoc-agent"
 CHECK_INTERVAL_SECONDS = 24 * 60 * 60
 REQUEST_TIMEOUT_SECONDS = 5
 
-_CACHE_PATH = Path.home() / ".strix" / "update-check.json"
+_CACHE_PATH = Path.home() / ".havoc" / "update-check.json"
 
 _background_thread: threading.Thread | None = None
 
@@ -71,9 +71,9 @@ def get_upgrade_command(method: str | None = None) -> str:
     method = method or get_install_method()
     commands = {
         "binary": ".havoc/--update",
-        "pipx": "pipx upgrade strix-agent",
-        "uv": "uv tool upgrade strix-agent",
-        "pip": "pip install --upgrade strix-agent",
+        "pipx": "pipx upgrade havoc-agent",
+        "uv": "uv tool upgrade havoc-agent",
+        "pip": "pip install --upgrade havoc-agent",
     }
     return commands[method]
 

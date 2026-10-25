@@ -27,7 +27,7 @@ from havoc.utils.secret_files import write_secret_text
 
 logger = logging.getLogger(__name__)
 
-AUTH_PATH = Path.home() / ".strix" / "viewer-auth.json"
+AUTH_PATH = Path.home() / ".havoc" / "viewer-auth.json"
 
 _OTP_TIMEOUT = 15
 _SEND_TIMEOUT = 30

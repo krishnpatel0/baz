@@ -31,7 +31,7 @@ from havoc.interface.url_safety import is_safe_web_url
 from havoc.utils.secret_files import write_secret_text
 
 
-AUTH_PATH = Path.home() / ".strix" / "platform-auth.json"
+AUTH_PATH = Path.home() / ".havoc" / "platform-auth.json"
 
 _HTTP_TIMEOUT_S = 30
 _DEFAULT_POLL_INTERVAL_S = 5

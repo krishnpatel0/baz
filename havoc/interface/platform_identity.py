@@ -11,7 +11,7 @@ from uuid import uuid4
 from havoc.utils.secret_files import write_secret_text
 
 
-IDENTITY_PATH = Path.home() / ".strix" / "cli-identity.json"
+IDENTITY_PATH = Path.home() / ".havoc" / "cli-identity.json"
 
 
 def _default_device_name(instance_id: str) -> str:

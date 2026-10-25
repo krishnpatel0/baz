@@ -58,7 +58,7 @@ class ReportRollbackError(RuntimeError):
 def _strix_version() -> str | None:
     """Best-effort package version for the SARIF tool.driver.version field."""
     try:
-        return version("strix-agent")
+        return version("havoc-agent")
     except PackageNotFoundError:
         return None
 

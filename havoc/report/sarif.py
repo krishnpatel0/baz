@@ -20,7 +20,7 @@ Design notes:
     canonical ``CWE-NNN`` form so dedup works across runs.
   * SARIF only has three levels (error / warning / note). Strix's five
     severities collapse into them. The raw severity label and CVSS score
-    survive in ``result.properties.strix`` for downstream tools that can
+    survive in ``result.properties.havoc`` for downstream tools that can
     distinguish CRITICAL vs HIGH.
   * GitHub code-scanning uses ``rule.properties['security-severity']``
     (a 0.0-10.0 string) to rank alerts. We populate it from CVSS when
@@ -77,7 +77,7 @@ _SYNTHETIC_LOCATION_URI = "SECURITY.md"
 
 
 # SARIF only has three result levels; Strix's five severities collapse here.
-# Original label survives in ``result.properties.strix.severity``.
+# Original label survives in ``result.properties.havoc.severity``.
 _SEVERITY_TO_LEVEL = {
     "critical": "error",
     "high": "error",
@@ -177,7 +177,7 @@ _CWE_TO_STRIDE: dict[str, tuple[str, ...]] = {
 
 # Default for unmapped / no-CWE findings: tampering + information-disclosure is
 # the most-common shape for an unclassified bug (matches the fork's and
-# strix-triage's DEFAULT_STRIDE_LEGS convention).
+# havoc-triage's DEFAULT_STRIDE_LEGS convention).
 _DEFAULT_STRIDE_LEGS: tuple[str, ...] = ("T", "I")
 
 
@@ -525,7 +525,7 @@ def _result_properties(
     if class_fingerprint:
         # Surfaced at top level so cross-rename dismissal tooling can
         # filter alerts by it without parsing the nested strix.* tree.
-        properties["strix_vuln_class_hash"] = class_fingerprint
+        properties["havoc_vuln_class_hash"] = class_fingerprint
     if is_synthetic:
         # Top-level so reviewers + downstream automation can filter
         # synthetic-anchored alerts without parsing the nested strix.*

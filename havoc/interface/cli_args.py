@@ -29,7 +29,7 @@ def get_version() -> str:
     try:
         from importlib.metadata import version
 
-        return version("strix-agent")
+        return version("havoc-agent")
     except Exception:
         return "unknown"
 
