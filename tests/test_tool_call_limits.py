@@ -180,7 +180,7 @@ class _DummyModel(Model):
 
 
 def test_cap_is_configurable(monkeypatch: pytest.MonkeyPatch, _reset_settings: None) -> None:
-    monkeypatch.setattr("strix.config.models.MultiProvider.get_model", lambda *_: _DummyModel())
+    monkeypatch.setattr("havoc.config.models.MultiProvider.get_model", lambda *_: _DummyModel())
     monkeypatch.setenv("LLM_MAX_TOOL_CALLS_PER_TURN", "7")
     load_settings()
 

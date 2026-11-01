@@ -286,7 +286,7 @@ async def test_existing_request_ids_retry_once_before_giving_up() -> None:
 
 
 def test_err_logs_caido_errors_as_warnings(caplog: pytest.LogCaptureFixture) -> None:
-    with caplog.at_level("WARNING", logger="strix.tools.proxy.tools"):
+    with caplog.at_level("WARNING", logger="havoc.tools.proxy.tools"):
         tools._err("list_requests", OperationUserError(""))
 
     [record] = caplog.records

@@ -793,7 +793,7 @@ async def test_dependency_report_dedupe_candidate_includes_dependency_metadata(
         captured["existing"] = existing
         return {"is_duplicate": False}
 
-    monkeypatch.setattr("strix.report.dedupe.check_duplicate", fake_check_duplicate)
+    monkeypatch.setattr("havoc.report.dedupe.check_duplicate", fake_check_duplicate)
     report_state.vulnerability_reports.append(
         {
             "id": "vuln-0001",
@@ -1550,7 +1550,7 @@ async def test_duplicate_verdict_rejects_without_touching_the_existing_report(
             "reason": "Same root cause on the same endpoint.",
         }
 
-    monkeypatch.setattr("strix.report.dedupe.check_duplicate", fake_check_duplicate)
+    monkeypatch.setattr("havoc.report.dedupe.check_duplicate", fake_check_duplicate)
 
     result = await _do_create(**_CONFIRMED_KWARGS, agent_id="834f79fb", agent_name="Validation")
 
@@ -2287,7 +2287,7 @@ def test_delete_reports_an_artifact_write_failure_and_keeps_the_report(
             raise OSError(28, "No space left on device")
         (run_dir_ / "run.json").write_text(json.dumps(record), encoding="utf-8")
 
-    monkeypatch.setattr("strix.report.state.write_run_record", write_run_record_once_failing)
+    monkeypatch.setattr("havoc.report.state.write_run_record", write_run_record_once_failing)
 
     result = _do_delete(report_id="vuln-0009", delete_reason="Disproved.", agent_id="aaaa1111")
 
@@ -2315,7 +2315,7 @@ def test_delete_reports_when_the_rollback_itself_cannot_be_written(
             raise OSError(28, "No space left on device")
         write_run_record(run_dir_, record)
 
-    monkeypatch.setattr("strix.report.state.write_run_record", write_run_record_while_disk_full)
+    monkeypatch.setattr("havoc.report.state.write_run_record", write_run_record_while_disk_full)
 
     with pytest.raises(ReportRollbackError) as excinfo:
         report_state.delete_vulnerability_report(

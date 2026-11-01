@@ -2082,7 +2082,7 @@ async def test_reconnect_reuses_the_stored_config_and_never_logs_the_token(
     registry = McpRegistry()
     entry = registry.add(name="fs", session=session, tool_count=1)
 
-    with caplog.at_level("DEBUG", logger="strix.tools.mcp.session"):
+    with caplog.at_level("DEBUG", logger="havoc.tools.mcp.session"):
         out = await call_mcp.on_invoke_tool(
             _ctx(registry), json.dumps({"connection": "fs", "tool": "read_file"})
         )
@@ -2132,7 +2132,7 @@ async def test_session_on_dead_fires_once_on_the_death_transition(
     session.set_on_dead(lambda: fires.append(1))
 
     clock = [100.0]
-    monkeypatch.setattr("strix.tools.mcp.session.time.monotonic", lambda: clock[0])
+    monkeypatch.setattr("havoc.tools.mcp.session.time.monotonic", lambda: clock[0])
     monkeypatch.setattr(mcp_session_mod, "_retry_delay", lambda _attempt, _retry_after: 0)
 
     async def no_sleep(_delay: float) -> None:

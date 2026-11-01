@@ -41,7 +41,7 @@ def test_strix_report_does_not_import_the_agents_graph() -> None:
 
         agents_modules = [m for m in sys.modules if m == "agents" or m.startswith("agents.")]
         assert not agents_modules, agents_modules
-        assert "strix.report.dedupe" not in sys.modules
+        assert "havoc.report.dedupe" not in sys.modules
         """
     )
     assert result.returncode == 0, result.stderr
@@ -76,7 +76,7 @@ def test_wait_for_import_warmup_lets_main_thread_import_the_agents_graph() -> No
 
         assert "agents" in sys.modules
         assert "agents.models" in sys.modules
-        assert "strix.core.runner" in sys.modules
+        assert "havoc.core.runner" in sys.modules
         """
     )
     assert result.returncode == 0, result.stderr

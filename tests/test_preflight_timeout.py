@@ -15,7 +15,7 @@ from havoc.interface.scan_setup import preflight_model_connection, preflight_req
 
 
 # ``strix.interface`` re-exports the ``main`` function, which shadows the submodule name.
-cli_main: Any = importlib.import_module("strix.interface.main")
+cli_main: Any = importlib.import_module("havoc.interface.main")
 
 
 if TYPE_CHECKING:
@@ -113,9 +113,9 @@ def test_warm_up_checks_the_dedupe_model_with_its_own_headers_and_the_preflight_
 
     monkeypatch.setattr(scan_setup, "preflight_request", record)
     monkeypatch.setattr(cli_main, "preflight_request", record)
-    monkeypatch.setattr("strix.config.models.configure_sdk_model_defaults", lambda _settings: None)
+    monkeypatch.setattr("havoc.config.models.configure_sdk_model_defaults", lambda _settings: None)
     monkeypatch.setattr(
-        "strix.report.dedupe.resolve_dedupe_model", lambda _dedupe, _name: dedupe_model
+        "havoc.report.dedupe.resolve_dedupe_model", lambda _dedupe, _name: dedupe_model
     )
 
     asyncio.run(cli_main.warm_up_llm())
@@ -150,8 +150,8 @@ def test_warm_up_checks_each_model_with_its_own_body_fields(
 
     monkeypatch.setattr(scan_setup, "preflight_request", record)
     monkeypatch.setattr(cli_main, "preflight_request", record)
-    monkeypatch.setattr("strix.config.models.configure_sdk_model_defaults", lambda _settings: None)
-    monkeypatch.setattr("strix.report.dedupe.resolve_dedupe_model", lambda _dedupe, _name: object())
+    monkeypatch.setattr("havoc.config.models.configure_sdk_model_defaults", lambda _settings: None)
+    monkeypatch.setattr("havoc.report.dedupe.resolve_dedupe_model", lambda _dedupe, _name: object())
 
     asyncio.run(cli_main.warm_up_llm())
 

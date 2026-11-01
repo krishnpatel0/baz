@@ -860,7 +860,7 @@ async def test_structured_provider_refusal_fails_interactive_agent(
     refusal = "This request was blocked under the provider's usage policy."
     stream = _StructuredRefusalStream(refusal)
     monkeypatch.setattr(
-        "strix.core.execution.Runner.run_streamed", lambda *_args, **_kwargs: stream
+        "havoc.core.execution.Runner.run_streamed", lambda *_args, **_kwargs: stream
     )
     coordinator = AgentCoordinator()
     await coordinator.register("root", "strix", parent_id=None)
@@ -892,7 +892,7 @@ async def test_structured_provider_refusal_fails_noninteractive_child(
     refusal = "This request was blocked under the provider's usage policy."
     stream = _StructuredRefusalStream(refusal)
     monkeypatch.setattr(
-        "strix.core.execution.Runner.run_streamed", lambda *_args, **_kwargs: stream
+        "havoc.core.execution.Runner.run_streamed", lambda *_args, **_kwargs: stream
     )
     coordinator = AgentCoordinator()
     await coordinator.register("root", "strix", parent_id=None)
@@ -930,7 +930,7 @@ async def test_crashing_noninteractive_child_settles_and_wakes_its_parent(
     def _boom(*_args: Any, **_kwargs: Any) -> Any:
         raise RuntimeError("sandbox died mid-turn")
 
-    monkeypatch.setattr("strix.core.execution.Runner.run_streamed", _boom)
+    monkeypatch.setattr("havoc.core.execution.Runner.run_streamed", _boom)
     coordinator = AgentCoordinator()
     await coordinator.register("root", "strix", parent_id=None)
     await coordinator.register("child", "recon", parent_id="root")

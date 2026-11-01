@@ -41,14 +41,14 @@ def test_console_logging_hides_warnings_and_shows_errors(monkeypatch: pytest.Mon
     monkeypatch.setattr(sys, "stderr", err)
     strix_logging.setup_console_logging()
 
-    logger = logging.getLogger("strix.llm.request_log")
+    logger = logging.getLogger("havoc.llm.request_log")
     logger.warning("llm_request outcome=error")
     logger.error("boom")
 
     out = err.getvalue()
     assert "llm_request" not in out
     assert "ERROR" in out
-    assert "strix.llm.request_log: boom" in out
+    assert "havoc.llm.request_log: boom" in out
 
 
 @pytest.mark.usefixtures("clean_loggers")
@@ -60,7 +60,7 @@ def test_console_logging_follows_the_current_stderr(monkeypatch: pytest.MonkeyPa
     second = io.StringIO()
     monkeypatch.setattr(sys, "stderr", second)
 
-    logging.getLogger("strix.test").error("after swap")
+    logging.getLogger("havoc.test").error("after swap")
 
     assert first.getvalue() == ""
     assert "after swap" in second.getvalue()
@@ -87,9 +87,9 @@ def test_scan_logging_reuses_the_console_handler(
 
     strix_logger = logging.getLogger("strix")
     assert len(_stderr_handlers(strix_logger)) == 1
-    logging.getLogger("strix.test").error("once")
+    logging.getLogger("havoc.test").error("once")
     assert err.getvalue().count("once") == 1
-    assert "once" in (tmp_path / "strix.log").read_text(encoding="utf-8")
+    assert "once" in (tmp_path / "havoc.log").read_text(encoding="utf-8")
 
     teardown()
     assert len(_stderr_handlers(strix_logger)) == 1

@@ -348,7 +348,7 @@ async def test_litellm_logger_dispatches_and_isolates_sink_failures(
     request_log.register_sink(boom)
     try:
         logger = request_log._build_litellm_logger()
-        with caplog.at_level(logging.ERROR, logger="strix.llm.request_log"):
+        with caplog.at_level(logging.ERROR, logger="havoc.llm.request_log"):
             await logger.async_log_success_event(
                 _anthropic_kwargs(None, headers={"request-id": "req_dispatch"}),
                 _FakeResponse(),
@@ -388,7 +388,7 @@ def test_log_line_sink_formats_without_content(caplog: pytest.LogCaptureFixture)
         None,
         outcome="error",
     )
-    with caplog.at_level(logging.DEBUG, logger="strix.llm.request_log"):
+    with caplog.at_level(logging.DEBUG, logger="havoc.llm.request_log"):
         request_log._log_line_sink(event)
     line = caplog.records[-1].getMessage()
     assert "request_id=req_line01" in line
@@ -412,7 +412,7 @@ def test_log_line_names_upstream_recorded_during_attempt(
         request_log._http_reply.reset(token)
     assert event.details is not None
     assert event.details["upstream_provider"] == "Together"
-    with caplog.at_level(logging.DEBUG, logger="strix.llm.request_log"):
+    with caplog.at_level(logging.DEBUG, logger="havoc.llm.request_log"):
         request_log._log_line_sink(event)
     line = caplog.records[-1].getMessage()
     assert "upstream=Together upstream_error=provider_unavailable" in line

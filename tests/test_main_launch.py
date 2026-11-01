@@ -10,12 +10,12 @@ from typing import Any
 import pytest
 
 
-cli_main: Any = importlib.import_module("strix.interface.main")
-cli_args: Any = importlib.import_module("strix.interface.cli_args")
-report_state_module: Any = importlib.import_module("strix.report.state")
-interactive: Any = importlib.import_module("strix.interface.interactive")
-tui_runtime: Any = importlib.import_module("strix.interface.tui.runtime")
-tui_sidecar: Any = importlib.import_module("strix.interface.tui.sidecar")
+cli_main: Any = importlib.import_module("havoc.interface.main")
+cli_args: Any = importlib.import_module("havoc.interface.cli_args")
+report_state_module: Any = importlib.import_module("havoc.report.state")
+interactive: Any = importlib.import_module("havoc.interface.interactive")
+tui_runtime: Any = importlib.import_module("havoc.interface.tui.runtime")
+tui_sidecar: Any = importlib.import_module("havoc.interface.tui.sidecar")
 
 
 def _launch(
@@ -44,7 +44,7 @@ def _launch(
 
     monkeypatch.setattr(sys, "argv", ["strix", "--target", "https://example.com"])
     monkeypatch.setattr(cli_main, "terminal_attached", lambda: terminal)
-    monkeypatch.setattr("strix.interface.cli.run_cli", run_cli)
+    monkeypatch.setattr("havoc.interface.cli.run_cli", run_cli)
     monkeypatch.setattr(cli_main, "report_error", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(cli_main, "_print_error_panel", lambda title, _msg: calls.append(title))
     monkeypatch.setattr(cli_main, "display_completion_message", lambda *_args: None)

@@ -80,7 +80,7 @@ def test_every_unraisable_is_logged_not_printed(
     assert capsys.readouterr().err == ""
     [record] = strix_records
     assert record.levelno == logging.WARNING
-    assert record.name == "strix.telemetry"
+    assert record.name == "havoc.telemetry"
     message = logging.Formatter().format(record)
     if args.err_msg:  # type: ignore[attr-defined]
         assert message.startswith(args.err_msg)  # type: ignore[attr-defined]

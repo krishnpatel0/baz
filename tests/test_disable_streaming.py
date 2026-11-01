@@ -295,7 +295,7 @@ def test_get_model_wraps_when_disabled(
     monkeypatch: pytest.MonkeyPatch, _reset_settings: None
 ) -> None:
     inner = _DummyModel()
-    monkeypatch.setattr("strix.config.models.MultiProvider.get_model", lambda *_: inner)
+    monkeypatch.setattr("havoc.config.models.MultiProvider.get_model", lambda *_: inner)
     monkeypatch.setenv("LLM_DISABLE_STREAMING", "true")
     load_settings()
 
@@ -308,7 +308,7 @@ def test_get_model_keeps_streaming_by_default(
     monkeypatch: pytest.MonkeyPatch, _reset_settings: None
 ) -> None:
     inner = _DummyModel()
-    monkeypatch.setattr("strix.config.models.MultiProvider.get_model", lambda *_: inner)
+    monkeypatch.setattr("havoc.config.models.MultiProvider.get_model", lambda *_: inner)
     load_settings()
 
     model = StrixProvider().get_model("openai/gpt-4o-mini")

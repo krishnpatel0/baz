@@ -33,7 +33,7 @@ _WAIT_SECONDS = 2
 def _fast_wait(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     # The real ceiling is 300s per wait; the shape of the bug is the same.
     monkeypatch.setattr(
-        "strix.tools.agents_graph.tools._WAIT_DEFAULT_TIMEOUT_S", _WAIT_SECONDS, raising=True
+        "havoc.tools.agents_graph.tools._WAIT_DEFAULT_TIMEOUT_S", _WAIT_SECONDS, raising=True
     )
     yield
 

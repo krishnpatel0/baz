@@ -202,7 +202,7 @@ class _DummyModel(Model):
 def test_idle_timeout_is_configurable(
     monkeypatch: pytest.MonkeyPatch, _reset_settings: None
 ) -> None:
-    monkeypatch.setattr("strix.config.models.MultiProvider.get_model", lambda *_: _DummyModel())
+    monkeypatch.setattr("havoc.config.models.MultiProvider.get_model", lambda *_: _DummyModel())
     monkeypatch.setenv("LLM_STREAM_IDLE_TIMEOUT", "45")
     monkeypatch.setenv("LLM_STREAM_FIRST_EVENT_TIMEOUT", "30")
     monkeypatch.setenv("LLM_STREAM_TOTAL_TIMEOUT", "400")
@@ -220,7 +220,7 @@ def test_idle_timeout_is_off_without_streaming(
 ) -> None:
     # LLM_DISABLE_STREAMING turns the whole request into one event, so an idle
     # gap would just be the request duration — the request timeout bounds that.
-    monkeypatch.setattr("strix.config.models.MultiProvider.get_model", lambda *_: _DummyModel())
+    monkeypatch.setattr("havoc.config.models.MultiProvider.get_model", lambda *_: _DummyModel())
     monkeypatch.setenv("LLM_STREAM_IDLE_TIMEOUT", "45")
     monkeypatch.setenv("LLM_DISABLE_STREAMING", "true")
     load_settings()
