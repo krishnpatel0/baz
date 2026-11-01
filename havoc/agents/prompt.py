@@ -55,6 +55,7 @@ def _resolve_skills(
     if is_diff_scoped:
         ordered.append("scan_modes/diff")
     ordered.append("tooling/agent_browser")
+    ordered.append("tooling/chrome_devtools")
     ordered.append("tooling/python")
     ordered.append("analysis/counterevidence")
     ordered.append("analysis/severity_calibration")

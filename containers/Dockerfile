@@ -109,6 +109,13 @@ RUN npm install -g retire@latest && \
     npm install -g @ast-grep/cli@latest && \
     npm install -g tree-sitter-cli@latest && \
     npm install -g agent-browser@0.26.0 && \
+    # Browser inspection layer. chrome-devtools-mcp turns the DevTools panel
+    # (console, network bodies, isolated cookie jars, evaluate_script) into MCP
+    # tool calls; supergateway republishes its stdio transport over HTTP so the
+    # host-side MCP client can reach it. Both pinned: the bridge command in
+    # havoc/browser/stack.py is built against this exact argument surface.
+    npm install -g chrome-devtools-mcp@1.12.0 && \
+    npm install -g supergateway@4.2.1 && \
     npm cache clean --force && \
     # ast-grep ships two identical binaries (`ast-grep` and `sg`); dedupe (~52MB)
     ln -sf ast-grep /home/pentester/.npm-global/lib/node_modules/@ast-grep/cli/sg

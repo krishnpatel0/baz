@@ -38,6 +38,9 @@ logger = logging.getLogger(__name__)
 # In-container Caido sidecar port (matches the image's caido-cli bind).
 _CONTAINER_CAIDO_PORT = 48080
 
+# In-container browser DevTools MCP gateway port (see havoc/browser/stack.py).
+_CONTAINER_BROWSER_PORT = 48081
+
 
 _SESSION_CACHE: dict[str, dict[str, Any]] = {}
 
@@ -343,7 +346,7 @@ async def create_or_reuse(
             backend(
                 image=image,
                 manifest=manifest,
-                exposed_ports=(_CONTAINER_CAIDO_PORT,),
+                exposed_ports=(_CONTAINER_CAIDO_PORT, _CONTAINER_BROWSER_PORT),
                 bind_mounts=bind_mounts,
             )
         )
@@ -377,7 +380,7 @@ async def create_or_reuse(
         deferred = DeferredSandboxSession(
             bring_up,
             manifest=manifest,
-            exposed_ports=(_CONTAINER_CAIDO_PORT,),
+            exposed_ports=(_CONTAINER_CAIDO_PORT, _CONTAINER_BROWSER_PORT),
         )
 
         async def _caido_when_up() -> Any:

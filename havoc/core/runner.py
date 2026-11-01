@@ -131,6 +131,39 @@ def _record_mcp_connections(connection_names: list[str]) -> None:
     report_state.record_mcp_connections(connection_names)
 
 
+async def _browser_mcp_requests(
+    session: Any,
+    configured: list[Any],
+) -> list[Any]:
+    """Start the browser DevTools MCP bridge and return its connection request.
+
+    Returns an empty list when a connection named ``browser`` is already
+    configured (the caller's config wins), or when the bridge cannot be
+    brought up. Losing the browser is a capability downgrade, not a run
+    failure: the agent still has ``agent-browser`` over the shell, so this
+    fails open deliberately.
+    """
+    from havoc.browser import CONNECTION_NAME, connect, connection_config
+    from havoc.tools.mcp import McpConnectionRequest
+
+    if any(getattr(req.config, "name", None) == CONNECTION_NAME for req in configured):
+        logger.info("browser MCP connection supplied by config; not starting the bridge")
+        return []
+
+    try:
+        stack = await connect(session)
+    except Exception:
+        logger.exception("browser MCP bridge failed; continuing without it")
+        return []
+
+    if stack is None:
+        logger.warning("browser DevTools bridge unavailable; shell browser still works")
+        return []
+
+    logger.info("browser DevTools control online at %s", stack.url)
+    return [McpConnectionRequest(config=connection_config(stack))]
+
+
 def _note_exit_reason(reason: str) -> None:
     """Record why the scan stopped so the end-of-scan beacon reports it."""
     report_state = get_global_report_state()
@@ -477,6 +510,10 @@ async def run_havoc_scan(
                 ]
             else:
                 mcp_requests = mcp_connection_requests
+            mcp_requests = [
+                *mcp_requests,
+                *_browser_mcp_requests(bundle["session"], mcp_requests),
+            ]
             if mcp_requests:
                 for request in mcp_requests:
                     mcp_registry.register(request)
