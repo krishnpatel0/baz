@@ -21,6 +21,8 @@ from havoc.tools.proxy.tools import existing_request_ids
 
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from havoc.report.state import ReportState
 
 
@@ -954,13 +956,56 @@ async def _do_create(
             cvss_score,
             title,
         )
-        return {
+        result: dict[str, Any] = {
             "success": True,
             "message": f"Vulnerability report '{title}' created successfully",
             "report_id": report_id,
             "severity": severity,
             "cvss_score": cvss_score,
         }
+        bundle_dir = _open_evidence_bundle(report_state, report_id, title)
+        if bundle_dir is not None:
+            # Recorded on the finding so the report renderer can embed the
+            # screenshots instead of only naming them.
+            report_state.attach_evidence_bundle(report_id, str(bundle_dir))
+            result["evidence_dir"] = str(bundle_dir)
+            result["evidence_hint"] = _EVIDENCE_HINT
+        return result
+
+
+_EVIDENCE_HINT = (
+    "Screenshots, HTTP captures and console logs you take from here land in "
+    "this directory and ship with the report. Capture what proves the finding "
+    "before you finish — a finding with no artifacts is a finding the hunter "
+    "has to reproduce by hand."
+)
+
+
+def _open_evidence_bundle(
+    report_state: Any,
+    report_id: str,
+    title: str,
+) -> Path | None:
+    """Create the finding's evidence directory next to the report.
+
+    Never fails the report: the finding is already stored by the time this
+    runs, and losing the ability to attach artifacts is not a reason to lose
+    the finding. A ``None`` return just means the agent gets no
+    ``evidence_dir`` in the tool result.
+    """
+    try:
+        run_dir = report_state.get_run_dir()
+    except Exception:
+        logger.exception("could not resolve run dir for evidence bundle")
+        return None
+    try:
+        from havoc.evidence import open_bundle
+
+        bundle = open_bundle(run_dir, report_id, title)
+    except Exception:
+        logger.exception("could not open evidence bundle for %s", report_id)
+        return None
+    return bundle.root
 
 
 def _caller_identity(ctx: RunContextWrapper) -> tuple[str | None, str | None]:

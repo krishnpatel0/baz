@@ -220,6 +220,56 @@ def atomic_write_text(path: Path, payload: str) -> None:
     tmp_path.replace(path)
 
 
+def _render_bundle_artifacts(report: dict[str, Any]) -> list[str]:
+    """Render a finding's evidence bundle as report sections.
+
+    Screenshots are embedded inline relative to the run directory, so the report
+    stays correct when the whole run folder (or a zipped finding) is moved. A
+    bundle that is missing — an older report, or one filed before bundles
+    existed — renders as nothing rather than as an empty section.
+    """
+    bundle_path = report.get("evidence_bundle")
+    if not isinstance(bundle_path, str) or not bundle_path:
+        return []
+    root = Path(bundle_path)
+    if not root.is_dir():
+        return []
+
+    lines: list[str] = []
+    shots_dir = root / "screenshots"
+    if shots_dir.is_dir():
+        shots = sorted(shots_dir.glob("*.png"))
+        if shots:
+            lines.append("## Screenshots\n")
+            for shot in shots:
+                # Relative to the report file, which sits one level up from
+                # findings/; a Posix path keeps the markdown valid on Windows.
+                rel = f"../findings/{root.name}/screenshots/{shot.name}"
+                lines.append(f"![{_shot_caption(shot.name)}]({rel})")
+                lines.append("")
+                lines.append(f"*{_shot_caption(shot.name)}*")
+                lines.append("")
+
+    http_dir = root / "http"
+    if http_dir.is_dir():
+        exchanges = sorted(http_dir.glob("*.http"))
+        if exchanges:
+            lines.append("## Captured Exchanges\n")
+            lines.extend(f"- `findings/{root.name}/http/{e.name}`" for e in exchanges)
+            lines.append("")
+    return lines
+
+
+def _shot_caption(filename: str) -> str:
+    """Turn ``02-bob-reads-invoice.png`` into ``Bob reads invoice``."""
+    stem = filename.rsplit(".", 1)[0]
+    parts = stem.split("-", 1)
+    if len(parts) == 2 and parts[0].isdigit():
+        stem = parts[1]
+    words = stem.replace("_", " ").replace("-", " ").strip()
+    return words[:1].upper() + words[1:] if words else filename
+
+
 def render_vulnerability_md(report: dict[str, Any]) -> str:  # noqa: PLR0912, PLR0915
     lines: list[str] = [
         f"# {report.get('title', 'Untitled Vulnerability')}\n",
@@ -267,6 +317,10 @@ def render_vulnerability_md(report: dict[str, Any]) -> str:  # noqa: PLR0912, PL
         lines.append("## Evidence\n")
         lines.append(str(report["evidence"]))
         lines.append("")
+
+    artifacts = _render_bundle_artifacts(report)
+    if artifacts:
+        lines.extend(artifacts)
 
     if report.get("impact"):
         lines.append("## Impact\n")

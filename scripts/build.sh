@@ -60,10 +60,10 @@ if [ "$OS_NAME" = "windows" ]; then
     TUI_BINARY="${TUI_BINARY}.exe"
 fi
 mkdir -p build/sidecar
-(cd strix/interface/tui && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o "../../../$TUI_BINARY" ./cmd/strix-tui)
+(cd havoc/interface/tui && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o "../../../$TUI_BINARY" ./cmd/strix-tui)
 
 echo -e "\n${BLUE}Building binary with PyInstaller...${NC}"
-uv run pyinstaller strix.spec --noconfirm
+uv run pyinstaller havoc.spec --noconfirm
 
 RELEASE_DIR="dist/release"
 mkdir -p "$RELEASE_DIR"

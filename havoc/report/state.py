@@ -636,6 +636,21 @@ class ReportState:
         logger.info("Deleted vulnerability report %s - %s", report_id, report.get("title"))
         return report
 
+    def attach_evidence_bundle(self, report_id: str, bundle_path: str) -> bool:
+        """Record where a finding's evidence bundle lives on disk.
+
+        Kept out of the updatable field set on purpose: this is bookkeeping the
+        harness owns, not something an agent revises. Returns False when the id
+        is unknown, so a caller cannot believe it attached artifacts to a
+        finding that does not exist. ``save_run_data`` persists it with the rest
+        of the report state.
+        """
+        for report in self.vulnerability_reports:
+            if report.get("id") == report_id:
+                report["evidence_bundle"] = bundle_path
+                return True
+        return False
+
     def get_existing_vulnerabilities(self) -> list[dict[str, Any]]:
         return list(self.vulnerability_reports)
 
