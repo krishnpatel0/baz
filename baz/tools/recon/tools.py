@@ -14,14 +14,21 @@ the lookups.
 from __future__ import annotations
 
 import json
+import shlex
 from typing import Any
 
 from agents import RunContextWrapper, function_tool
 
-from baz.intel.cve_match import CveRecord, match_components, prioritise
+from baz.intel.cve_match import (
+    CveRecord,
+    match_components,
+    parse_cvemap_output,
+    prioritise,
+)
 from baz.intel.fingerprint import Component, Source
 from baz.intel.tech import detect, summary, to_components
 from baz.recon.dorks import Phase, all_dorks, plan_for, search
+from baz.tools.recon.sandbox import sandbox_exec
 
 
 @function_tool(timeout=15)
@@ -240,9 +247,10 @@ async def cve_queue(components_json: str = "", use_detected: bool = True) -> str
 
     # CVEs come from the sandbox's vulnx; without them the queue is empty rather
     # than fabricated. The agent runs vulnx and re-calls with the records.
-    # CVE records come from the sandbox's vulnx; without them the queue is empty
-    # rather than fabricated — the agent runs vulnx and re-calls with records.
-    records: list[CveRecord] = []
+    # Pull live records from the sandbox's vulnx, one query per versioned
+    # component. The sandbox call is best-effort: a network failure or a rate
+    # limit yields an empty queue, never a fabricated one.
+    records = await _cvemax_lookup([c for c in components if c.version])
     matches = prioritise(match_components(components, records)) if records else []
 
     return json.dumps(
@@ -258,3 +266,51 @@ async def cve_queue(components_json: str = "", use_detected: bool = True) -> str
         },
         ensure_ascii=False,
     )
+
+
+async def _cvemax_lookup(components: list[Any]) -> list[CveRecord]:
+    """Query vulnx for each versioned component via the scan's sandbox.
+
+    Uses vulnx's structured field syntax, not free text: a bare
+    `vulnx search "nginx 1.18.0"` returns *zero* records, while
+    `affected_products.product:nginx` returns the real nginx CVEs. Getting this
+    wrong is why the queue was silently empty.
+
+    Records are then kept only when their description actually names the
+    product. vulnx's ranking brings in neighbours — a query for nginx returned
+    Traefik and Cloud Controller results — and a queue full of other products'
+    bugs is worse than an empty one, because an agent will chase them.
+
+    Best-effort throughout: a network failure, a rate limit or a missing
+    sandbox yields a shorter queue, never a fabricated one.
+    """
+    records: list[CveRecord] = []
+    seen: set[str] = set()
+
+    for component in components[:12]:
+        product = component.product.strip().lower()
+        if not product:
+            continue
+        query = f"affected_products.product:{shlex.quote(product)}"
+        text = await sandbox_exec(f"vulnx search --json --silent {query} 2>/dev/null", timeout=45)
+        if not text:
+            continue
+        for record in parse_cvemap_output(text):
+            if record.cve_id in seen:
+                continue
+            if not _mentions_product(record, product):
+                continue
+            seen.add(record.cve_id)
+            records.append(record)
+    return records
+
+
+def _mentions_product(record: Any, product: str) -> bool:
+    """Whether the advisory text actually names the product.
+
+    Checked against summary and affected-range text, not the parsed `product`
+    field, because extraction from a free-text description is best-effort and
+    a false negative here is cheap while a false positive is not.
+    """
+    haystack = f"{record.product} {record.summary} {record.affected}".lower()
+    return product.split(maxsplit=1)[0] in haystack

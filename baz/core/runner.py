@@ -440,6 +440,13 @@ async def run_baz_scan(
 
         register(scan_id, FrameGrabber(sandbox_session))
 
+    # Host-side tools that enrich from the sandbox (vulnx CVE lookup, for one)
+    # reach it through this registry; there is no session in their scope.
+    with contextlib.suppress(Exception):
+        from baz.tools.recon.sandbox import register as register_sandbox
+
+        register_sandbox(sandbox_session)
+
     async def _spill_to_workspace(output_id: str, text: str) -> str | None:
         """Write an oversized tool result into the sandbox; return its path or None."""
         path = f"{WORKSPACE_SPILL_DIR}/{output_id}.txt"
@@ -792,6 +799,10 @@ async def run_baz_scan(
             from baz.interface.viewer.live_view import unregister
 
             unregister(scan_id)
+        with contextlib.suppress(Exception):
+            from baz.tools.recon.sandbox import unregister as unregister_sandbox
+
+            unregister_sandbox()
         if cleanup_on_exit:
             logger.info("Tearing down sandbox session for scan %s", scan_id)
             await session_manager.cleanup(scan_id)

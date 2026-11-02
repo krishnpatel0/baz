@@ -13,6 +13,7 @@ with the preconditions an agent must confirm before spending a turn.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import re
@@ -88,36 +89,56 @@ def _vulnx_path() -> str | None:
 
 
 def parse_cvemap_output(text: str) -> list[CveRecord]:
-    """Parse `vulnx -l` JSON output into records, tolerating partial data.
+    """Parse `vulnx search --json` output into records, tolerating partial data.
 
-    cvemap emits a JSON array; fields vary by record, so every access is
-    defensive. A malformed record is skipped rather than failing the batch.
+    vulnx emits either a JSON array or newline-delimited objects (one per
+    record) depending on flags; both are handled. Field names differ between
+    the CVE and the KEV/TEMPLATE shapes, so every access is defensive and a
+    malformed record is skipped rather than failing the batch.
     """
     records: list[CveRecord] = []
     try:
         data = json.loads(text)
     except json.JSONDecodeError:
-        logger.debug("cvemap output was not JSON; attempting line parsing")
-        return _parse_cvemap_lines(text)
+        # vulnx --json with no array wrapper emits one object per line.
+        items = []
+        for raw_line in text.splitlines():
+            stripped = raw_line.strip()
+            if not stripped.startswith("{"):
+                continue
+            with contextlib.suppress(json.JSONDecodeError):
+                items.append(json.loads(stripped))
+        if not items:
+            logger.debug("cvulnx output was neither JSON nor NDJSON")
+            return _parse_cvemap_lines(text)
+        data = items
 
     items = data if isinstance(data, list) else data.get("results", [])
     for item in items:
         if not isinstance(item, dict):
             continue
-        cve_id = str(item.get("id") or item.get("cve_id") or "").upper()
+        # vulnx names the id `doc_id` for CVE-shaped records.
+        cve_id = str(item.get("doc_id") or item.get("id") or item.get("cve_id") or "").upper()
         if not re.fullmatch(r"CVE-\d{4}-\d{4,7}", cve_id):
             continue
         records.append(
             CveRecord(
                 cve_id=cve_id,
-                product=str(item.get("product") or ""),
-                summary=str(item.get("description") or ""),
-                cvss=_float(item.get("cvss_score")),
-                epss=_float(item.get("epss")),
-                affected=str(item.get("affected") or ""),
-                references=tuple(str(r) for r in (item.get("references") or [])[:10]),
-                has_poc=bool(item.get("poc")),
-                kev=bool(item.get("kev")),
+                # Field names are the live vulnx schema, verified against
+                # `vulnx search --json`: cve_id, description, remediation,
+                # cvss_score, epss_score, is_poc, is_kev, cwe_id. Earlier
+                # guesses (doc_id/name/poc/kev) matched nothing and produced
+                # an empty queue.
+                product=_product_of(item),
+                summary=str(item.get("description") or item.get("cve_description") or ""),
+                cvss=_float(item.get("cvss_score") or item.get("cvss")),
+                epss=_float(item.get("epss_score") or item.get("epss")),
+                affected=str(item.get("affected") or item.get("affected_versions") or ""),
+                references=tuple(
+                    str(r) for r in (item.get("references") or item.get("urls") or [])[:10]
+                ),
+                has_poc=bool(item.get("is_poc") or item.get("poc")),
+                kev=bool(item.get("is_kev") or item.get("kev")),
             )
         )
     return records
@@ -126,6 +147,31 @@ def parse_cvemap_output(text: str) -> list[CveRecord]:
 def _parse_cvemap_lines(text: str) -> list[CveRecord]:
     """Fallback for the table output when JSON is unavailable."""
     return [CveRecord(cve_id=m.group(1)) for m in re.finditer(r"(CVE-\d{4}-\d{4,7})", text)]
+
+
+def _product_of(item: dict[str, Any]) -> str:
+    """Best-effort product name from a vulnx record.
+
+    vulnx records carry no dedicated product field. The description leads with
+    it in practice — "Traefik 3.7.11 before 3.7.15 contains an authorization
+    bypass" — so the first token before a version or a verb is the product.
+    """
+    for key in ("product", "vendor_product", "cpe_product", "package"):
+        value = item.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    for key in ("name", "title"):
+        value = item.get(key)
+        if isinstance(value, str) and value.strip():
+            head = re.split(r"[-:]", value, maxsplit=1)[0].strip()
+            return re.sub(r"\s+\d.*$", "", head).lower()
+    description = str(item.get("description") or "").strip()
+    if not description:
+        return ""
+    # First 1-3 words, stopping at a version number, a lowercase verb, or
+    # punctuation: "Traefik 3.7.11 before ..." -> "traefik".
+    match = re.match(r"([A-Za-z][\w.+\- ]{1,40}?)(?=\s+\d|\s+[a-z]+\s|[,.:;]|$)", description)
+    return match.group(1).strip().lower() if match else description.split()[0].lower()
 
 
 def _float(value: Any) -> float | None:

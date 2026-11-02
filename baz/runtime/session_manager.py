@@ -328,7 +328,24 @@ async def create_or_reuse(
                 "http_proxy": container_caido_url,
                 "https_proxy": container_caido_url,
                 "ALL_PROXY": container_caido_url,
-                "NO_PROXY": "localhost,127.0.0.1",
+                # Intelligence lookups are infrastructure, not target traffic:
+                # vulnx/ProjectDiscovery, CISA KEV and advisory feeds should not
+                # be captured, rate-limited or blocked by Caido. Routing them
+                # through the proxy made every CVE lookup return the proxy's
+                # 500 error page.
+                "NO_PROXY": (
+                    "localhost,127.0.0.1,"
+                    "api.projectdiscovery.io,"
+                    "cveawg.mitre.org,"
+                    "nvd.nist.gov,"
+                    "services.nvd.nist.gov,"
+                    "www.cisa.gov,"
+                    "api.osv.dev,"
+                    "api.github.com,"
+                    "registry.npmjs.org,"
+                    "pypi.org,"
+                    "files.pythonhosted.org"
+                ),
             },
         ),
     )
