@@ -55,7 +55,7 @@ from baz.tools.proxy.tools import (
     view_request,
     view_sitemap_entry,
 )
-from baz.tools.recon import cve_queue, dork_search, dork_stats
+from baz.tools.recon import cve_queue, dork_search, dork_stats, tech_detect
 from baz.tools.reporting.tool import (
     create_dependency_report,
     create_vulnerability_report,
@@ -667,6 +667,7 @@ _BASE_TOOLS: tuple[Tool, ...] = (
     dork_search,
     dork_stats,
     cve_queue,
+    tech_detect,
     scope_rules,
     list_mcps,
     search_mcp_tools,

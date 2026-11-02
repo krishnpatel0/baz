@@ -1770,9 +1770,7 @@ def resolve_workspace_files(specs: list[str] | None) -> list[dict[str, str]]:
         # Same discriminator as _workspace_file_dest: a DEST exists only when
         # the prefix is an existing file, which also protects Windows drive
         # colons — "C:\\x" leaves "C" as the prefix, which is not a file.
-        source_text = (
-            raw if sep and Path(raw.strip()).expanduser().is_file() else spec
-        )
+        source_text = raw if sep and Path(raw.strip()).expanduser().is_file() else spec
         source = Path(source_text.strip()).expanduser()
         if not source.is_file():
             raise ValueError(f"'{source}' is not an existing file")

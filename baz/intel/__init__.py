@@ -19,6 +19,7 @@ from baz.intel.fingerprint import (
     from_lockfile,
     merge,
 )
+from baz.intel.tech import Tech, detect, summary, to_components
 
 
 __all__ = [
@@ -27,6 +28,8 @@ __all__ = [
     "Fingerprint",
     "Match",
     "Source",
+    "Tech",
+    "detect",
     "from_headers",
     "from_html",
     "from_lockfile",
@@ -34,5 +37,7 @@ __all__ = [
     "merge",
     "parse_cvemap_output",
     "prioritise",
+    "summary",
+    "to_components",
     "version_in_range",
 ]

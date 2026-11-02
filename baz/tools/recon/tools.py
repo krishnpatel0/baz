@@ -20,6 +20,7 @@ from agents import RunContextWrapper, function_tool
 
 from baz.intel.cve_match import CveRecord, match_components, prioritise
 from baz.intel.fingerprint import Component, Source
+from baz.intel.tech import detect, summary, to_components
 from baz.recon.dorks import Phase, all_dorks, plan_for, search
 
 
@@ -105,6 +106,73 @@ async def dork_search(
     return json.dumps(payload, ensure_ascii=False)
 
 
+@function_tool(timeout=20)
+async def tech_detect(
+    ctx: RunContextWrapper,
+    headers_json: str,
+    body: str = "",
+    remember: bool = True,
+) -> str:
+    """Identify the software stack from a response, with version claims.
+
+    Give it what the target already sent — response headers as a JSON object,
+    and optionally the response body. It returns components with a confidence
+    and, where the target disclosed one, a version with the signal it came from.
+
+    Feeds version-level hunting: components that carry a version go straight
+    into `cve_queue`. A product with no version is still reported, because
+    "they run WordPress, version hidden" is a real finding shape — probe for the
+    version rather than assuming one.
+
+    Two independent signals are what make a claim strong; a lone `Server: nginx`
+    header is weak and comes back weak, so do not treat a low confidence as a
+    confirmed stack.
+
+    Args:
+        headers_json: Response headers as a JSON object, e.g.
+            ``{"server": "nginx/1.18.0", "x-powered-by": "PHP/7.4.3"}``.
+            Lowercase keys are fine; matching is case-insensitive.
+        body: Response body, ideally the first ~256 KB. Asset paths, generator
+            meta tags and framework markers are all near the top of a page, so a
+            truncated body loses little.
+        remember: Keep the detected components for this scan so `cve_queue` can
+            match them later without you re-supplying them.
+    """
+    try:
+        raw = json.loads(headers_json)
+    except json.JSONDecodeError as exc:
+        return json.dumps({"error": f"headers_json is not valid JSON: {exc}"})
+    if not isinstance(raw, dict):
+        return json.dumps({"error": "headers_json must be an object of header: value"})
+
+    techs = detect(headers={str(k): str(v) for k, v in raw.items()}, body=body)
+    components = to_components(techs)
+    if remember:
+        _REMEMBERED.extend(components)
+
+    return json.dumps(
+        {
+            "count": len(techs),
+            "summary": summary(techs),
+            "components": [t.to_wire() for t in techs],
+            "versioned": [c["product"] for c in components if c["version"]],
+            "next": (
+                "call cve_queue for versioned components; probe for the version on the rest"
+                if components
+                else "no components identified — fetch the page and try again with its body"
+            ),
+        },
+        ensure_ascii=False,
+    )
+
+
+_REMEMBERED: list[dict[str, str]] = []
+"""Components seen this scan, so cve_queue can match without re-supplying them.
+
+Process-local and append-only; a scan is one process, so its lifetime is right.
+"""
+
+
 @function_tool(timeout=15)
 async def dork_stats(ctx: RunContextWrapper) -> str:
     """Summarise the dork arsenal: counts by phase, and how many hit secrets."""
@@ -123,23 +191,36 @@ async def dork_stats(ctx: RunContextWrapper) -> str:
 
 
 @function_tool(timeout=20)
-async def cve_queue(components_json: str) -> str:
+async def cve_queue(components_json: str = "", use_detected: bool = True) -> str:
     """Match fingerprinted components against known CVEs and order the work.
 
     Args:
         components_json: JSON list of ``{"product": "...", "version": "..."}``
             entries — what you fingerprinted. Cast a wide net: headers, asset
-            versions, lockfiles, changelogs.
+            versions, lockfiles, changelogs. May be omitted when
+            ``tech_detect`` has already run for this scan.
+        use_detected: When ``components_json`` is empty, fall back to the
+            components ``tech_detect`` remembered for this scan.
 
     Returns a prioritised queue. Ordering is KEV first, then whether a public
     PoC exists, then EPSS, then CVSS: a medium with a public exploit and EPSS 90
     outranks a critical with neither. Each entry carries the preconditions to
     confirm before spending a turn — a version match is not a finding.
     """
-    try:
-        raw = json.loads(components_json)
-    except json.JSONDecodeError as exc:
-        return json.dumps({"error": f"components_json is not valid JSON: {exc}"})
+    if not components_json.strip() and use_detected:
+        raw = [c for c in _REMEMBERED if c.get("version")]
+        if not raw:
+            return json.dumps(
+                {
+                    "error": "no components supplied and none detected with a version",
+                    "next": "run tech_detect on the target's response first",
+                }
+            )
+    else:
+        try:
+            raw = json.loads(components_json)
+        except json.JSONDecodeError as exc:
+            return json.dumps({"error": f"components_json is not valid JSON: {exc}"})
 
     if not isinstance(raw, list):
         return json.dumps({"error": "components_json must be a list"})
