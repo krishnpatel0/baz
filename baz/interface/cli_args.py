@@ -63,46 +63,46 @@ def parse_arguments() -> argparse.Namespace:
         epilog="""
 Examples:
   # Web application penetration test
-  .baz/--target https://example.com
+  baz --target https://example.com
 
   # GitHub repository analysis
-  .baz/--target https://github.com/user/repo
-  .baz/--target git@github.com:user/repo.git
+  baz --target https://github.com/user/repo
+  baz --target git@github.com:user/repo.git
 
   # Local code analysis
-  .baz/--target ./my-project
+  baz --target ./my-project
 
   # API spec test (OpenAPI/Swagger file or Postman collection export)
-  .baz/--target ./openapi.yaml --target https://api.example.com
-  .baz/--target ./collection.postman_collection.json
+  baz --target ./openapi.yaml --target https://api.example.com
+  baz --target ./collection.postman_collection.json
 
   # Postman collection pulled live by id (needs POSTMAN_API_KEY); optional environment
-  .baz/--target postman://<collection-uuid> --target https://api.example.com
-  .baz/--target "postman://<collection-uuid>?env=<environment-uuid>"
+  baz --target postman://<collection-uuid> --target https://api.example.com
+  baz --target "postman://<collection-uuid>?env=<environment-uuid>"
 
   # Domain penetration test
-  .baz/--target example.com
+  baz --target example.com
 
   # IP address penetration test
-  .baz/--target 192.168.1.42
+  baz --target 192.168.1.42
 
   # Multiple targets (e.g., white-box testing with source and deployed app)
-  .baz/--target https://github.com/user/repo --target https://example.com
-  .baz/--target ./my-project --target https://staging.example.com --target https://prod.example.com
+  baz --target https://github.com/user/repo --target https://example.com
+  baz --target ./my-project --target https://staging.example.com --target https://prod.example.com
 
   # Targets from a file, one target per non-empty, non-comment line
-  .baz/--target-list ./targets.txt
+  baz --target-list ./targets.txt
 
   # Custom instructions (inline)
-  .baz/--target example.com --instruction "Focus on authentication vulnerabilities"
+  baz --target example.com --instruction "Focus on authentication vulnerabilities"
 
   # Custom instructions (from file)
-  .baz/--target example.com --instruction-file ./instructions.txt
-  .baz/--target https://app.com --instruction-file /path/to/detailed_instructions.md
+  baz --target example.com --instruction-file ./instructions.txt
+  baz --target https://app.com --instruction-file /path/to/detailed_instructions.md
 
   # Extra files placed in the sandbox workspace
-  .baz/--target ./my-project --workspace-file ./wordlist.txt
-  .baz/--target https://app.com --workspace-file ./openapi.yaml:specs/openapi.yaml
+  baz --target ./my-project --workspace-file ./wordlist.txt
+  baz --target https://app.com --workspace-file ./openapi.yaml:specs/openapi.yaml
 
 Baz Cloud:
   baz cloud login
@@ -118,7 +118,7 @@ Baz Cloud:
         "-v",
         "--version",
         action="version",
-        version=f".baz/{get_version()}",
+        version=f"baz {get_version()}",
     )
 
     parser.add_argument(

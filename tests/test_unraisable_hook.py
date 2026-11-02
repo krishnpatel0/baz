@@ -124,7 +124,8 @@ print("done")
 
 def test_process_exit_prints_nothing_to_stderr() -> None:
     env = {
-        k: v for k, v in os.environ.items() if k in {"PATH", "HOME", "SYSTEMROOT", "TEMP", "TMP"}
+        k: v for k, v in os.environ.items()
+        if k in {"PATH", "HOME", "SYSTEMROOT", "TEMP", "TMP", "USERPROFILE", "HOMEDRIVE", "HOMEPATH"}
     }
     env |= {"PYTHONPATH": str(Path(__file__).resolve().parents[1]), "BAZ_DEBUG": ""}
     proc = subprocess.run(  # noqa: S603

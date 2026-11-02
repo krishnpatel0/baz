@@ -297,7 +297,7 @@ def _print_success(console: Console) -> None:
     text.append(") — runs are billed to your ChatGPT plan.", style="white")
     text.append("\n\n", style="white")
     text.append("Run a scan as usual, e.g. ", style="white")
-    text.append(".baz/--target https://example.com", style="bold cyan")
+    text.append("baz --target https://example.com", style="bold cyan")
     console.print()
     console.print(
         Panel(

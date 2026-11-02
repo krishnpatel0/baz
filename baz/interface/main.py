@@ -237,7 +237,7 @@ def display_completion_message(args: argparse.Namespace, results_path: Path) -> 
         resume_text.append("\n")
         resume_text.append("Resume", style="dim")
         resume_text.append("  ")
-        resume_text.append(f".baz/--resume {args.run_name}", style="#22c55e")
+        resume_text.append(f"baz --resume {args.run_name}", style="#22c55e")
         panel_parts.extend(["\n", resume_text])
 
     panel_content = Text.assemble(*panel_parts)

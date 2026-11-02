@@ -3,7 +3,7 @@
 Follows the pattern used by tools like gh, uv, and pip: a background,
 rate-limited (once per 24h) check against the release source, a cached
 result in ``~/.baz``, a non-intrusive notice with the upgrade command
-for the detected install method, and a ``.baz/--update`` self-update
+for the detected install method, and a ``baz --update`` self-update
 path for the standalone binary install.
 """
 
@@ -70,7 +70,7 @@ def get_install_method() -> str:
 def get_upgrade_command(method: str | None = None) -> str:
     method = method or get_install_method()
     commands = {
-        "binary": ".baz/--update",
+        "binary": "baz --update",
         "pipx": "pipx upgrade baz-agent",
         "uv": "uv tool upgrade baz-agent",
         "pip": "pip install --upgrade baz-agent",
@@ -399,7 +399,7 @@ def self_update(console: Console | None = None, version: str | None = None) -> b
 
     current = get_version()
     if current != "unknown" and not _is_newer(latest, current):
-        console.print(f"[#22c55e].baz/{current} is already the latest version.[/]")
+        console.print(f"[#22c55e]baz {current} is already the latest version.[/]")
         return True
 
     target = _release_target()

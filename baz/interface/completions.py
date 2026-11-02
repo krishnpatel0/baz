@@ -369,5 +369,5 @@ def _fish_script() -> str:
   set -e words[1]
   command baz completions --candidates $words (commandline -ct)
 end
-complete -c .baz/-f -a '(__baz_candidates)'
+complete -c baz -f -a '(__baz_candidates)'
 """
