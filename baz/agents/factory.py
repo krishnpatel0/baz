@@ -56,6 +56,7 @@ from baz.tools.proxy.tools import (
     view_sitemap_entry,
 )
 from baz.tools.recon import cve_queue, dork_search, dork_stats, tech_detect
+from baz.tools.reduce import reduce_output
 from baz.tools.reporting.tool import (
     create_dependency_report,
     create_vulnerability_report,
@@ -139,8 +140,32 @@ def _tool_output_limits() -> tuple[int, int]:
 async def _bound_result(result: Any) -> Any:
     if not isinstance(result, str):
         return result
+
+    # Reduce structured scanner output to a compact table *before* bounding.
+    # Head/tail truncation drops the middle, which is where a scan's one
+    # interesting result lives; a severity-sorted table keeps every finding's
+    # identity while costing a fraction of the tokens. Non-scanner output falls
+    # through untouched.
     max_lines, max_bytes = _tool_output_limits()
+    if len(result) > max_bytes:
+        reduced = _try_reduce(result)
+        if reduced is not None:
+            result = reduced
+
     return await bound_and_store(result, max_lines=max_lines, max_bytes=max_bytes)
+
+
+def _try_reduce(text: str) -> str | None:
+    """Reduce scanner output to a table, or None when it is not recognised."""
+    try:
+        reduction = reduce_output(text)
+    except Exception:  # noqa: BLE001 - reduction is an optimisation, never a gate
+        logger.debug("tool output reduction failed", exc_info=True)
+        return None
+    if reduction is None:
+        return None
+    logger.debug("reduced tool output: %d -> %d rows", reduction.total, reduction.shown)
+    return reduction.to_text()
 
 
 def _format_tool_error(exc: Exception) -> str:
