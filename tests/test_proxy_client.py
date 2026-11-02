@@ -14,8 +14,8 @@ from typing import TYPE_CHECKING, Any, cast
 import pytest
 from caido_sdk_client.errors import OperationUserError
 
-from havoc.runtime.caido_handle import CaidoBootstrapHandle
-from havoc.tools.proxy import caido_api, tools
+from baz.runtime.caido_handle import CaidoBootstrapHandle
+from baz.tools.proxy import caido_api, tools
 
 
 if TYPE_CHECKING:
@@ -286,7 +286,7 @@ async def test_existing_request_ids_retry_once_before_giving_up() -> None:
 
 
 def test_err_logs_caido_errors_as_warnings(caplog: pytest.LogCaptureFixture) -> None:
-    with caplog.at_level("WARNING", logger="havoc.tools.proxy.tools"):
+    with caplog.at_level("WARNING", logger="baz.tools.proxy.tools"):
         tools._err("list_requests", OperationUserError(""))
 
     [record] = caplog.records

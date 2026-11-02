@@ -14,7 +14,7 @@ from typing import Any
 
 import pytest
 
-from havoc.runtime.caido_bootstrap import bootstrap_caido
+from baz.runtime.caido_bootstrap import bootstrap_caido
 
 
 class _FakeExecResult:

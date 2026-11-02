@@ -11,18 +11,18 @@ from typing import Any, cast
 import pytest
 from agents.tool import ToolOutputImage
 
-from havoc.config.settings import DEFAULT_MAX_TURNS
-from havoc.interface.tui.backend.controller import TuiController
-from havoc.interface.tui.backend.projection import bounded_state_projection, terminal_projection
-from havoc.interface.tui.backend.protocol import (
+from baz.config.settings import DEFAULT_MAX_TURNS
+from baz.interface.tui.backend.controller import TuiController
+from baz.interface.tui.backend.projection import bounded_state_projection, terminal_projection
+from baz.interface.tui.backend.protocol import (
     MAX_COMMAND_BYTES,
     PROTOCOL_CAPABILITIES,
     PROTOCOL_VERSION,
     ProtocolHandshakeError,
     envelope,
 )
-from havoc.interface.tui.backend.server import TuiBackendServer
-from havoc.interface.tui.live_view import TuiLiveView
+from baz.interface.tui.backend.server import TuiBackendServer
+from baz.interface.tui.live_view import TuiLiveView
 
 
 def args() -> argparse.Namespace:

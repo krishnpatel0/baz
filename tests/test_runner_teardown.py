@@ -7,11 +7,11 @@ from typing import Any
 import pytest
 from agents import ModelSettings
 
-import havoc.tools.notes.tools as notes_tools
-import havoc.tools.todo.tools as todo_tools
-from havoc.core import runner
-from havoc.core.agents import AgentCoordinator
-from havoc.runtime import session_manager
+import baz.tools.notes.tools as notes_tools
+import baz.tools.todo.tools as todo_tools
+from baz.core import runner
+from baz.core.agents import AgentCoordinator
+from baz.runtime import session_manager
 
 
 def _wire_runner(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
@@ -38,7 +38,7 @@ def _wire_runner(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
     monkeypatch.setattr(runner, "build_root_task", lambda _c: "task")
     monkeypatch.setattr(runner, "build_scope_context", lambda _c: "")
     monkeypatch.setattr(runner, "make_model_settings", lambda *_a, **_k: ModelSettings())
-    monkeypatch.setattr(runner, "build_havoc_agent", lambda **_k: object())
+    monkeypatch.setattr(runner, "build_baz_agent", lambda **_k: object())
     monkeypatch.setattr(runner, "make_child_factory", lambda **_k: lambda **_kk: object())
     monkeypatch.setattr(runner, "open_agent_session", lambda _root_id, _db: object())
 
@@ -83,7 +83,7 @@ async def test_a_live_child_is_settled_before_sessions_close(
 
     monkeypatch.setattr(runner, "run_agent_loop", _root_finishes)
 
-    await runner.run_havoc_scan(
+    await runner.run_baz_scan(
         scan_config={"targets": [], "scan_mode": "deep"},
         scan_id="scan-test",
         image="img",
@@ -113,7 +113,7 @@ async def test_missing_finish_is_logged_only_when_root_did_not_complete(
 
     monkeypatch.setattr(runner, "run_agent_loop", _root_ends_with_text)
 
-    await runner.run_havoc_scan(
+    await runner.run_baz_scan(
         scan_config={"targets": [], "scan_mode": "deep"},
         scan_id="scan-test",
         image="img",

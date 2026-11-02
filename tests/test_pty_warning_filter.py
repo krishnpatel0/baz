@@ -3,7 +3,7 @@ from collections.abc import Iterator
 
 import pytest
 
-from havoc.telemetry import logging as tlog
+from baz.telemetry import logging as tlog
 
 
 _SDK_LOGGER = "agents.sandbox.sandboxes.docker"

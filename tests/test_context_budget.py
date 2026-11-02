@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from havoc.config import load_settings
-from havoc.llm import context_budget
+from baz.config import load_settings
+from baz.llm import context_budget
 
 
 if TYPE_CHECKING:

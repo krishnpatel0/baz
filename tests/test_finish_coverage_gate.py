@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from havoc.tools.coverage.tools import _record_impl, hydrate_coverage_from_disk
-from havoc.tools.finish.tool import _coverage_summary
+from baz.tools.coverage.tools import _record_impl, hydrate_coverage_from_disk
+from baz.tools.finish.tool import _coverage_summary
 
 
 if TYPE_CHECKING:

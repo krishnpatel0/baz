@@ -5,9 +5,9 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-from havoc.config import loader
-from havoc.config.settings import DedupeSettings
-from havoc.report.dedupe import _dedupe_model_settings, resolve_dedupe_model
+from baz.config import loader
+from baz.config.settings import DedupeSettings
+from baz.report.dedupe import _dedupe_model_settings, resolve_dedupe_model
 
 
 if TYPE_CHECKING:
@@ -23,7 +23,7 @@ def _unwrap(model: object) -> object:
 
 
 def test_dedupe_key_bound_to_model_client_not_global_env() -> None:
-    dedupe = DedupeSettings(HAVOC_DEDUPE_MODEL="deepseek/cheap", DEDUPE_LLM_API_KEY="dedupe-key")
+    dedupe = DedupeSettings(BAZ_DEDUPE_MODEL="deepseek/cheap", DEDUPE_LLM_API_KEY="dedupe-key")
     model = _unwrap(resolve_dedupe_model(dedupe, "deepseek/cheap"))
     # The key is bound to the dedupe model's own client, so a shared-provider
     # main key can't clobber it (and vice versa) through the process globals —
@@ -34,7 +34,7 @@ def test_dedupe_key_bound_to_model_client_not_global_env() -> None:
 
 def test_dedupe_settings_carry_no_request_credentials() -> None:
     dedupe = DedupeSettings(
-        HAVOC_DEDUPE_MODEL="deepseek/cheap",
+        BAZ_DEDUPE_MODEL="deepseek/cheap",
         DEDUPE_LLM_API_KEY="dedupe-key",
         DEDUPE_LLM_API_BASE="https://dedupe.example/v1",
     )
@@ -45,7 +45,7 @@ def test_dedupe_settings_carry_no_request_credentials() -> None:
 
 def test_dedupe_endpoint_bound_to_model_client() -> None:
     dedupe = DedupeSettings(
-        HAVOC_DEDUPE_MODEL="openai/cheap",
+        BAZ_DEDUPE_MODEL="openai/cheap",
         DEDUPE_LLM_API_KEY="dedupe-key",
         DEDUPE_LLM_API_BASE="https://dedupe.example/v1",
     )
@@ -56,14 +56,14 @@ def test_dedupe_endpoint_bound_to_model_client() -> None:
 
 
 def test_dedupe_without_credentials_uses_default_provider() -> None:
-    dedupe = DedupeSettings(HAVOC_DEDUPE_MODEL="deepseek/cheap")
+    dedupe = DedupeSettings(BAZ_DEDUPE_MODEL="deepseek/cheap")
     model = _unwrap(resolve_dedupe_model(dedupe, "deepseek/cheap"))
     assert model.api_key is None  # type: ignore[attr-defined]
 
 
 def test_dedicated_dedupe_model_uses_own_headers_not_main() -> None:
     dedupe = DedupeSettings(
-        HAVOC_DEDUPE_MODEL="deepseek/cheap",
+        BAZ_DEDUPE_MODEL="deepseek/cheap",
         DEDUPE_LLM_EXTRA_HEADERS={"X-Dedupe": "yes"},
     )
     settings = _dedupe_model_settings(dedupe, "deepseek/cheap", 300)
@@ -76,7 +76,7 @@ def test_dedicated_dedupe_model_gets_no_main_headers_by_default(
     monkeypatch.setenv("LLM_EXTRA_HEADERS", json.dumps({"X-Main": "secret"}))
     loader._cached = None
     try:
-        dedupe = DedupeSettings(HAVOC_DEDUPE_MODEL="deepseek/cheap")
+        dedupe = DedupeSettings(BAZ_DEDUPE_MODEL="deepseek/cheap")
         settings = _dedupe_model_settings(dedupe, "deepseek/cheap", 300)
         assert settings.extra_headers is None
     finally:
@@ -101,8 +101,8 @@ def test_dedupe_defaults_are_empty() -> None:
 
 
 def test_dedupe_model_read_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("HAVOC_DEDUPE_MODEL", "deepseek/deepseek-v4-flash")
-    monkeypatch.setenv("HAVOC_DEDUPE_REASONING_EFFORT", "low")
+    monkeypatch.setenv("BAZ_DEDUPE_MODEL", "deepseek/deepseek-v4-flash")
+    monkeypatch.setenv("BAZ_DEDUPE_REASONING_EFFORT", "low")
 
     settings = DedupeSettings()
 
@@ -115,12 +115,12 @@ def test_config_file_loads_dedupe_model(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     for key in (
-        "HAVOC_LLM",
+        "BAZ_LLM",
         "LLM_API_KEY",
         "OPENAI_API_KEY",
         "LLM_API_BASE",
-        "HAVOC_DEDUPE_MODEL",
-        "HAVOC_DEDUPE_REASONING_EFFORT",
+        "BAZ_DEDUPE_MODEL",
+        "BAZ_DEDUPE_REASONING_EFFORT",
     ):
         monkeypatch.delenv(key, raising=False)
     path = tmp_path / "config.json"
@@ -128,9 +128,9 @@ def test_config_file_loads_dedupe_model(
         json.dumps(
             {
                 "env": {
-                    "HAVOC_LLM": "openai/root",
-                    "HAVOC_DEDUPE_MODEL": "deepseek/cheap",
-                    "HAVOC_DEDUPE_REASONING_EFFORT": "minimal",
+                    "BAZ_LLM": "openai/root",
+                    "BAZ_DEDUPE_MODEL": "deepseek/cheap",
+                    "BAZ_DEDUPE_REASONING_EFFORT": "minimal",
                 }
             }
         ),
@@ -157,7 +157,7 @@ def test_dedicated_dedupe_model_uses_own_body_fields_not_main(
     loader._cached = None
     try:
         dedupe = DedupeSettings(
-            HAVOC_DEDUPE_MODEL="deepseek/cheap",
+            BAZ_DEDUPE_MODEL="deepseek/cheap",
             DEDUPE_LLM_EXTRA_BODY={"service_tier": "flex"},
         )
         settings = _dedupe_model_settings(dedupe, "deepseek/cheap", 300)
@@ -172,7 +172,7 @@ def test_dedicated_dedupe_model_gets_no_main_body_fields_by_default(
     monkeypatch.setenv("LLM_EXTRA_BODY", json.dumps({"safety_identifier": "main"}))
     loader._cached = None
     try:
-        dedupe = DedupeSettings(HAVOC_DEDUPE_MODEL="deepseek/cheap")
+        dedupe = DedupeSettings(BAZ_DEDUPE_MODEL="deepseek/cheap")
         settings = _dedupe_model_settings(dedupe, "deepseek/cheap", 300)
         assert settings.extra_body is None
     finally:

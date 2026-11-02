@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from havoc.core.inputs import build_root_task
-from havoc.interface.utils import read_workspace_files, resolve_workspace_files
+from baz.core.inputs import build_root_task
+from baz.interface.utils import read_workspace_files, resolve_workspace_files
 
 
 if TYPE_CHECKING:

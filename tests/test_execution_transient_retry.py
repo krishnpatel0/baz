@@ -15,9 +15,9 @@ from openai import (
     RateLimitError,
 )
 
-from havoc.config import codex
-from havoc.core import execution
-from havoc.core.agents import AgentCoordinator
+from baz.config import codex
+from baz.core import execution
+from baz.core.agents import AgentCoordinator
 
 
 def _request() -> httpx.Request:
@@ -123,7 +123,7 @@ async def _run_once(
     monkeypatch.setattr(Runner, "run_streamed", _fake_run_streamed)
 
     coordinator = AgentCoordinator()
-    await coordinator.register("root", "strix", parent_id=None)
+    await coordinator.register("root", "baz", parent_id=None)
 
     result = await execution._run_cycle(
         object(),

@@ -24,8 +24,8 @@ from agents.run import RunConfig
 from openai import AsyncOpenAI
 from openai.types.responses import ResponseFunctionToolCall
 
-from havoc.config.models import _NonStreamingModel, _TurnGuardModel
-from havoc.config.tool_call_ids import TurnCallIdRewriter, dedupe_history_call_ids
+from baz.config.models import _NonStreamingModel, _TurnGuardModel
+from baz.config.tool_call_ids import TurnCallIdRewriter, dedupe_history_call_ids
 
 
 if TYPE_CHECKING:

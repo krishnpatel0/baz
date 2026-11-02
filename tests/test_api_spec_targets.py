@@ -9,9 +9,9 @@ from typing import Any
 
 import pytest
 
-from havoc.core.inputs import build_root_task, build_scope_context
-from havoc.interface.scan_setup import build_targets_info
-from havoc.interface.utils import infer_target_type, stage_api_specs
+from baz.core.inputs import build_root_task, build_scope_context
+from baz.interface.scan_setup import build_targets_info
+from baz.interface.utils import infer_target_type, stage_api_specs
 
 
 OPENAPI = {

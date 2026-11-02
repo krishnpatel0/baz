@@ -1,8 +1,8 @@
 # Node / local-viewer SPA source (the built bundle in
-# strix/interface/viewer/static/ is committed and shipped; do not ignore it)
+# baz/interface/viewer/static/ is committed and shipped; do not ignore it)
 node_modules/
-strix/interface/viewer/frontend/node_modules/
-strix/interface/viewer/frontend/.vite/
+baz/interface/viewer/frontend/node_modules/
+baz/interface/viewer/frontend/.vite/
 
 # Python
 __pycache__/
@@ -75,7 +75,7 @@ logs/
 tensorboard/
 
 # Agent execution traces
-havoc_runs/
+baz_runs/
 agent_runs/
 
 # Misc
@@ -97,4 +97,4 @@ schema.graphql
 # Root-only local data and reference checkouts
 /.benchmarks/
 /references/
-/strix_runs_main/
+/baz_runs_main/

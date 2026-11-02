@@ -6,8 +6,8 @@ from typing import Any
 import pytest
 from agents.tool_context import ToolContext
 
-from havoc.tools.todo import tools
-from havoc.tools.todo.tools import _coerce_priority, create_todo
+from baz.tools.todo import tools
+from baz.tools.todo.tools import _coerce_priority, create_todo
 
 
 @pytest.fixture(autouse=True)

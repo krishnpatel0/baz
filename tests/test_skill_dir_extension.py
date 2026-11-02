@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 
-import havoc.skills as skills_mod
-from havoc.agents.prompt import _resolve_skills, render_system_prompt
-from havoc.skills import (
+import baz.skills as skills_mod
+from baz.agents.prompt import _resolve_skills, render_system_prompt
+from baz.skills import (
     get_all_skill_names,
     get_available_skills,
     load_skills,
@@ -15,7 +15,7 @@ from havoc.skills import (
     skill_turn_limit,
     validate_requested_skills,
 )
-from havoc.utils.resource_paths import get_havoc_resource_path
+from baz.utils.resource_paths import get_baz_resource_path
 
 
 @pytest.fixture(autouse=True)
@@ -41,7 +41,7 @@ def _write_root_skill(root: Path, name: str, body: str) -> None:
 
 def test_no_registration_leaves_builtin_only() -> None:
     assert registered_skill_dirs() == ()
-    builtin = get_havoc_resource_path("skills")
+    builtin = get_baz_resource_path("skills")
     assert skill_search_dirs() == (builtin,)
     assert {"nmap", "subfinder"}.issubset(
         {skill["name"] for skill in get_available_skills()["tooling"]}

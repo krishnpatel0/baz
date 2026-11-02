@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pygments.lexers import BashLexer, PythonLexer
 
-from havoc.interface.viewer.report_pdf import _strip_code_fence
-from havoc.report.writer import (
+from baz.interface.viewer.report_pdf import _strip_code_fence
+from baz.report.writer import (
     guess_language_name,
     parse_fenced_code,
     resolve_lexer,

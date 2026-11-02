@@ -12,11 +12,11 @@ from __future__ import annotations
 import pytest
 from agents.tool import FunctionTool
 
-from havoc.agents import factory
-from havoc.tools.agents_graph.tools import agent_finish
-from havoc.tools.finish.tool import finish_scan
-from havoc.tools.reporting.tool import create_vulnerability_report
-from havoc.tools.wait_for_user.tool import wait_for_user
+from baz.agents import factory
+from baz.tools.agents_graph.tools import agent_finish
+from baz.tools.finish.tool import finish_scan
+from baz.tools.reporting.tool import create_vulnerability_report
+from baz.tools.wait_for_user.tool import wait_for_user
 
 
 _SCAN_AGENT_TOOLS = [

@@ -1,11 +1,11 @@
-"""Tests for SARIF repository-context derivation in strix.report.state."""
+"""Tests for SARIF repository-context derivation in baz.report.state."""
 
 from __future__ import annotations
 
 import subprocess
 from typing import TYPE_CHECKING
 
-from havoc.report.state import ReportState, _parse_repo_full_name
+from baz.report.state import ReportState, _parse_repo_full_name
 
 
 if TYPE_CHECKING:

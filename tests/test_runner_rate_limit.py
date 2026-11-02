@@ -1,4 +1,4 @@
-"""Tests for graceful handling of persistent RateLimitError in run_havoc_scan."""
+"""Tests for graceful handling of persistent RateLimitError in run_baz_scan."""
 
 from __future__ import annotations
 
@@ -11,11 +11,11 @@ import pytest
 from agents import ModelSettings
 from openai import RateLimitError
 
-import havoc.tools.notes.tools as notes_tools
-import havoc.tools.todo.tools as todo_tools
-from havoc.core import runner
-from havoc.core.agents import AgentCoordinator
-from havoc.runtime import session_manager
+import baz.tools.notes.tools as notes_tools
+import baz.tools.todo.tools as todo_tools
+from baz.core import runner
+from baz.core.agents import AgentCoordinator
+from baz.runtime import session_manager
 
 
 def _make_rate_limit_error() -> RateLimitError:
@@ -68,7 +68,7 @@ async def test_persistent_rate_limit_stops_gracefully(
     monkeypatch.setattr(runner, "build_root_task", lambda _scan_config: "task")
     monkeypatch.setattr(runner, "build_scope_context", lambda _scan_config: "")
     monkeypatch.setattr(runner, "make_model_settings", lambda *_args, **_kwargs: ModelSettings())
-    monkeypatch.setattr(runner, "build_havoc_agent", lambda **_kwargs: object())
+    monkeypatch.setattr(runner, "build_baz_agent", lambda **_kwargs: object())
     monkeypatch.setattr(runner, "make_child_factory", lambda **_kwargs: lambda **_k: object())
     monkeypatch.setattr(runner, "open_agent_session", lambda _root_id, _db: object())
 
@@ -80,7 +80,7 @@ async def test_persistent_rate_limit_stops_gracefully(
     coordinator = AgentCoordinator()
 
     with caplog.at_level(logging.WARNING):
-        result = await runner.run_havoc_scan(
+        result = await runner.run_baz_scan(
             scan_config={"targets": [], "scan_mode": "deep"},
             scan_id="scan-test",
             image="img",
@@ -92,5 +92,5 @@ async def test_persistent_rate_limit_stops_gracefully(
     assert len(root_ids) == 1
     assert coordinator.statuses[root_ids[0]] == "stopped"
     # the resume hint must carry the real scan id, not a literal placeholder
-    assert "strix --resume scan-test" in caplog.text
+    assert "baz --resume scan-test" in caplog.text
     assert "<run_name>" not in caplog.text

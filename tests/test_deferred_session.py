@@ -12,9 +12,9 @@ from agents.sandbox import SandboxAgent
 from agents.sandbox.capabilities import Filesystem, Shell
 from agents.sandbox.runtime_session_manager import SandboxRuntimeSessionManager
 
-from havoc.runtime import session_manager
-from havoc.runtime.backends import _BACKENDS, _BIND_MOUNT_BACKENDS, register_backend
-from havoc.runtime.deferred_session import DeferredSandboxClient, DeferredSandboxSession
+from baz.runtime import session_manager
+from baz.runtime.backends import _BACKENDS, _BIND_MOUNT_BACKENDS, register_backend
+from baz.runtime.deferred_session import DeferredSandboxClient, DeferredSandboxSession
 
 
 if TYPE_CHECKING:
@@ -231,7 +231,7 @@ async def test_extra_files_are_staged_inside_the_deferred_bring_up(backend: _Bac
     try:
         bundle = await _create(
             scan_id,
-            extra_files=[{"workspace_path": "/workspace/.strix/notes.md", "content": "hi"}],
+            extra_files=[{"workspace_path": "/workspace/.baz/notes.md", "content": "hi"}],
         )
         assert backend.session.writes == []
         backend.gate.set()
@@ -252,7 +252,7 @@ async def test_awaitable_extra_files_do_not_delay_the_backend_call(backend: _Bac
         await _settle()
         assert backend.calls == 1
         assert backend.session.writes == []
-        files.set_result([{"workspace_path": "/workspace/.strix/notes.md", "content": "hi"}])
+        files.set_result([{"workspace_path": "/workspace/.baz/notes.md", "content": "hi"}])
         await asyncio.wait_for(bundle["session"].resolve(), timeout=1)
         assert len(backend.session.writes) == 1
     finally:

@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from havoc.runtime.caido_handle import CaidoBootstrapHandle
+from baz.runtime.caido_handle import CaidoBootstrapHandle
 
 
 class _FakeClient:

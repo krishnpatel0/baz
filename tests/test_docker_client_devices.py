@@ -1,10 +1,10 @@
-"""``HAVOC_DOCKER_SANDBOX_DEVICES`` passes host devices through to the sandbox container."""
+"""``BAZ_DOCKER_SANDBOX_DEVICES`` passes host devices through to the sandbox container."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from havoc.runtime import docker_client
+from baz.runtime import docker_client
 
 
 if TYPE_CHECKING:

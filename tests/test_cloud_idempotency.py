@@ -9,9 +9,9 @@ from typing import Any
 import pytest
 import requests
 
-from havoc.interface import cloud
-from havoc.interface.cloud import http, runner
-from havoc.interface.completions import completion_candidates
+from baz.interface import cloud
+from baz.interface.cloud import http, runner
+from baz.interface.completions import completion_candidates
 
 
 class FakeResponse:
@@ -31,7 +31,7 @@ class FakeResponse:
 
 @pytest.fixture(autouse=True)
 def _token(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("HAVOC_API_TOKEN", "idempotency-test-token")
+    monkeypatch.setenv("BAZ_API_TOKEN", "idempotency-test-token")
     monkeypatch.setattr(time, "sleep", lambda _seconds: None)
 
 

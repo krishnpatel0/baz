@@ -5,8 +5,8 @@ from unittest.mock import patch
 import litellm
 from agents.usage import Usage
 
-from havoc.report.pricing import resolve_litellm_model
-from havoc.report.usage import LLMUsageLedger
+from baz.report.pricing import resolve_litellm_model
+from baz.report.usage import LLMUsageLedger
 
 
 def test_resolves_common_bare_model_names() -> None:

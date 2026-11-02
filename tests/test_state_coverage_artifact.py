@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from havoc.core.paths import runtime_state_dir
-from havoc.report.state import ReportState
-from havoc.tools.coverage.tools import _record_impl, hydrate_coverage_from_disk
+from baz.core.paths import runtime_state_dir
+from baz.report.state import ReportState
+from baz.tools.coverage.tools import _record_impl, hydrate_coverage_from_disk
 
 
 if TYPE_CHECKING:

@@ -7,7 +7,7 @@ from typing import Any, cast
 
 import pytest
 
-from havoc.core.sessions import open_agent_session
+from baz.core.sessions import open_agent_session
 
 
 def _fd_dir() -> Path | None:

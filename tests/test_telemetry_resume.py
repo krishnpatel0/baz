@@ -8,8 +8,8 @@ from typing import Any
 import pytest
 from agents.usage import Usage
 
-from havoc.report.state import ReportState
-from havoc.telemetry import posthog, scarf
+from baz.report.state import ReportState
+from baz.telemetry import posthog, scarf
 
 
 def _usage(requests: int, input_tokens: int, output_tokens: int, total_tokens: int) -> Usage:

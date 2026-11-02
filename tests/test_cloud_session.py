@@ -9,9 +9,9 @@ import pytest
 import requests
 from rich.console import Console
 
-from havoc.interface import cloud, platform_cli, platform_identity
-from havoc.interface.cloud import http
-from havoc.interface.cloud import session as cloud_session
+from baz.interface import cloud, platform_cli, platform_identity
+from baz.interface.cloud import http
+from baz.interface.cloud import session as cloud_session
 
 
 if TYPE_CHECKING:
@@ -34,8 +34,8 @@ class Response:
 def auth_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     path = tmp_path / "platform-auth.json"
     monkeypatch.setattr(platform_cli, "AUTH_PATH", path)
-    monkeypatch.delenv("HAVOC_API_TOKEN", raising=False)
-    monkeypatch.delenv("HAVOC_WORKSPACE_ID", raising=False)
+    monkeypatch.delenv("BAZ_API_TOKEN", raising=False)
+    monkeypatch.delenv("BAZ_WORKSPACE_ID", raising=False)
     return path
 
 
@@ -66,7 +66,7 @@ def test_http_workspace_pin_is_captured_once(
         }
     )
     http.request("GET", "/scans")
-    assert sent[0]["X-Strix-Workspace"] == "org_start"
+    assert sent[0]["X-Baz-Workspace"] == "org_start"
 
 
 def test_session_scope_update_persists_only_for_stored_session(

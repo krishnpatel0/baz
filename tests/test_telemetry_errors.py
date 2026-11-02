@@ -7,9 +7,9 @@ from typing import Any
 import pytest
 import requests
 
-from havoc.report.state import ReportState
-from havoc.telemetry import posthog, report_error, scarf, set_scan_phase
-from havoc.telemetry._common import exception_props
+from baz.report.state import ReportState
+from baz.telemetry import posthog, report_error, scarf, set_scan_phase
+from baz.telemetry._common import exception_props
 
 
 PRIVATE_MESSAGE = "private message that must stay on the machine"

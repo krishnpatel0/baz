@@ -113,7 +113,7 @@ RUN npm install -g retire@latest && \
     # (console, network bodies, isolated cookie jars, evaluate_script) into MCP
     # tool calls; supergateway republishes its stdio transport over HTTP so the
     # host-side MCP client can reach it. Both pinned: the bridge command in
-    # havoc/browser/stack.py is built against this exact argument surface.
+    # baz/browser/stack.py is built against this exact argument surface.
     npm install -g chrome-devtools-mcp@1.12.0 && \
     npm install -g supergateway@4.2.1 && \
     npm cache clean --force && \
@@ -258,8 +258,8 @@ RUN python3 -m venv /app/.venv && \
         > /home/pentester/.local/bin/jwt_tool && \
     chmod +x /home/pentester/.local/bin/jwt_tool
 
-COPY --chown=pentester:pentester havoc/tools/proxy/caido_api.py /opt/havoc-python/caido_api.py
-ENV PYTHONPATH=/opt/havoc-python
+COPY --chown=pentester:pentester baz/tools/proxy/caido_api.py /opt/baz-python/caido_api.py
+ENV PYTHONPATH=/opt/baz-python
 
 # Login shells (e.g. `bash -lc`) source /etc/profile, which on Debian/Kali
 # hard-resets PATH and drops the image's ENV PATH entries. Re-add the same

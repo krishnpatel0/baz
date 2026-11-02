@@ -6,7 +6,7 @@ import re
 
 import pytest
 
-from havoc.tools.output_store import (
+from baz.tools.output_store import (
     WORKSPACE_SPILL_DIR,
     bound_and_store,
     bound_text,

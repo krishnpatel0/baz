@@ -14,9 +14,9 @@ from agents.models.interface import ModelTracing
 from agents.models.openai_chatcompletions import OpenAIChatCompletionsModel
 from agents.models.openai_responses import OpenAIResponsesModel
 
-from havoc.config import loader
-from havoc.config.loader import load_settings
-from havoc.core.inputs import make_model_settings
+from baz.config import loader
+from baz.config.loader import load_settings
+from baz.core.inputs import make_model_settings
 
 
 if TYPE_CHECKING:

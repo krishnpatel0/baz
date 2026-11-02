@@ -8,9 +8,9 @@ from typing import Any, cast
 import pytest
 from agents.tool import FunctionTool
 
-from havoc.agents import factory
-from havoc.tools.notes.tools import list_notes
-from havoc.tools.reporting.tool import list_reports
+from baz.agents import factory
+from baz.tools.notes.tools import list_notes
+from baz.tools.reporting.tool import list_reports
 
 
 def _capturing_tool(

@@ -13,14 +13,14 @@ import pytest
 from agents.sandbox.entries import LocalDir
 from agents.sandbox.manifest import Manifest
 
-from havoc.runtime import session_manager
-from havoc.runtime.backends import (
+from baz.runtime import session_manager
+from baz.runtime.backends import (
     _BACKENDS,
     _BIND_MOUNT_BACKENDS,
     backend_supports_bind_mounts,
     register_backend,
 )
-from havoc.runtime.session_manager import (
+from baz.runtime.session_manager import (
     build_bind_mounts,
     build_extra_file_archive,
     build_manifest_entries,
@@ -204,18 +204,18 @@ def _members(archive: bytes | None) -> dict[str, bytes]:
 
 def test_extra_file_becomes_an_archive_member() -> None:
     archive = build_extra_file_archive(
-        [{"workspace_path": "/workspace/.strix/dependency-issues.jsonl", "content": b"{}\n"}]
+        [{"workspace_path": "/workspace/.baz/dependency-issues.jsonl", "content": b"{}\n"}]
     )
 
-    assert _members(archive) == {".strix/dependency-issues.jsonl": b"{}\n"}
+    assert _members(archive) == {".baz/dependency-issues.jsonl": b"{}\n"}
 
 
 def test_extra_file_str_content_is_encoded_utf8() -> None:
     archive = build_extra_file_archive(
-        [{"workspace_path": "/workspace/.strix/note.txt", "content": "héllo"}]
+        [{"workspace_path": "/workspace/.baz/note.txt", "content": "héllo"}]
     )
 
-    assert _members(archive) == {".strix/note.txt": "héllo".encode()}
+    assert _members(archive) == {".baz/note.txt": "héllo".encode()}
 
 
 def test_extra_file_invalid_paths_and_content_are_skipped() -> None:
@@ -256,13 +256,13 @@ def test_extra_file_shadowing_a_nested_source_root_is_skipped(tmp_path: Path) ->
 def test_extra_file_beside_a_source_tree_is_kept(tmp_path: Path) -> None:
     sources = [_source("repo", str(tmp_path))]
     beside = [
-        {"workspace_path": "/workspace/.strix/dependency-issues.jsonl", "content": b"{}\n"},
+        {"workspace_path": "/workspace/.baz/dependency-issues.jsonl", "content": b"{}\n"},
         {"workspace_path": "/workspace/repo-notes.txt", "content": b"x"},  # sibling, no prefix
     ]
 
     members = _members(build_extra_file_archive(beside, sources))
 
-    assert set(members) == {".strix/dependency-issues.jsonl", "repo-notes.txt"}
+    assert set(members) == {".baz/dependency-issues.jsonl", "repo-notes.txt"}
 
 
 def test_a_repeated_destination_keeps_the_first_file() -> None:
@@ -290,8 +290,8 @@ def test_a_control_character_in_the_path_is_rejected() -> None:
 def test_the_archive_upload_path_is_reserved() -> None:
     """An extra file cannot sit where the archive itself is uploaded."""
     files = [
-        {"workspace_path": "/workspace/.strix-extra-files.tar", "content": b"not ours"},
-        {"workspace_path": "/workspace/.strix-extra-files.tar/nested", "content": b"x"},
+        {"workspace_path": "/workspace/.baz-extra-files.tar", "content": b"not ours"},
+        {"workspace_path": "/workspace/.baz-extra-files.tar/nested", "content": b"x"},
     ]
 
     assert build_extra_file_archive(files) is None
@@ -302,14 +302,14 @@ def test_the_archive_upload_path_is_reserved() -> None:
 
 def test_a_large_bundle_stays_one_archive() -> None:
     files = [
-        {"workspace_path": f"/workspace/.strix/knowledge/issues/i{i}.md", "content": f"# {i}"}
+        {"workspace_path": f"/workspace/.baz/knowledge/issues/i{i}.md", "content": f"# {i}"}
         for i in range(2000)
     ]
 
     members = _members(build_extra_file_archive(files))
 
     assert len(members) == 2000
-    assert members[".strix/knowledge/issues/i1999.md"] == b"# 1999"
+    assert members[".baz/knowledge/issues/i1999.md"] == b"# 1999"
 
 
 @dataclass
@@ -413,7 +413,7 @@ async def test_extra_files_reach_every_backend_as_one_unpacked_archive(
             image="img",
             local_sources=[_source("repo", str(tmp_path))],
             extra_files=[
-                {"workspace_path": "/workspace/.strix/knowledge/org/notes.md", "content": "hi"},
+                {"workspace_path": "/workspace/.baz/knowledge/org/notes.md", "content": "hi"},
                 {"workspace_path": "/workspace/repo/inside.txt", "content": b"x"},
             ],
         )
@@ -424,9 +424,9 @@ async def test_extra_files_reach_every_backend_as_one_unpacked_archive(
 
     manifest = captured["manifest"]
     assert isinstance(manifest, Manifest)
-    assert not any(str(key).startswith(".strix") for key in manifest.entries)
+    assert not any(str(key).startswith(".baz") for key in manifest.entries)
     mount_targets = [m["target"] for m in captured["bind_mounts"]]
-    assert all(not target.startswith("/workspace/.strix") for target in mount_targets)
+    assert all(not target.startswith("/workspace/.baz") for target in mount_targets)
     if supports_bind_mounts:
         assert mount_targets == ["/workspace/repo"]
         assert "repo" not in manifest.entries
@@ -435,12 +435,12 @@ async def test_extra_files_reach_every_backend_as_one_unpacked_archive(
         assert isinstance(manifest.entries["repo"], LocalDir)
 
     [(archive_path, archive)] = fake_session.writes
-    assert archive_path == Path("/workspace/.strix-extra-files.tar")
-    assert _members(archive) == {".strix/knowledge/org/notes.md": b"hi"}
+    assert archive_path == Path("/workspace/.baz-extra-files.tar")
+    assert _members(archive) == {".baz/knowledge/org/notes.md": b"hi"}
     [argv] = fake_session.execs
     assert argv[:2] == ("sh", "-c")
     assert "--no-same-owner" in argv[2]
-    assert argv[-2:] == ("/workspace/.strix-extra-files.tar", "/workspace")
+    assert argv[-2:] == ("/workspace/.baz-extra-files.tar", "/workspace")
 
 
 @pytest.mark.asyncio

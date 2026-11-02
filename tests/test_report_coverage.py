@@ -1,17 +1,17 @@
-"""Tests for the coverage artifact assembled in strix.report.coverage."""
+"""Tests for the coverage artifact assembled in baz.report.coverage."""
 
 from __future__ import annotations
 
 import json
 from typing import TYPE_CHECKING, Any
 
-from havoc.report.coverage import (
+from baz.report.coverage import (
     _SKILL_PHRASINGS,
     build_coverage_document,
     read_agent_graph,
     write_coverage,
 )
-from havoc.skills import get_available_skills
+from baz.skills import get_available_skills
 
 
 if TYPE_CHECKING:

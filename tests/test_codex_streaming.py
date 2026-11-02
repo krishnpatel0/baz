@@ -21,8 +21,8 @@ from agents.models.openai_responses import OpenAIResponsesModel
 from openai import AsyncOpenAI, BadRequestError
 from openai.types.responses import ResponseOutputMessage, ResponseOutputText
 
-from havoc.config import codex
-from havoc.config.models import _CodexResponsesModel
+from baz.config import codex
+from baz.config.models import _CodexResponsesModel
 
 
 if TYPE_CHECKING:

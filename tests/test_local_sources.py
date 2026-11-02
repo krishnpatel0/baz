@@ -8,15 +8,15 @@ from typing import Any
 
 import pytest
 
-from havoc.interface.scan_setup import attach_workspace_mount
-from havoc.interface.utils import (
+from baz.interface.scan_setup import attach_workspace_mount
+from baz.interface.utils import (
     check_mountable_dir,
     collect_local_sources,
     dedupe_local_targets,
     infer_target_type,
     read_target_list_file,
 )
-from havoc.runtime.session_manager import build_bind_mounts
+from baz.runtime.session_manager import build_bind_mounts
 
 
 def _local_target(target_path: str) -> dict[str, Any]:

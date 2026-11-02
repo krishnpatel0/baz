@@ -7,9 +7,9 @@ import pytest
 from agents import RunConfig, Runner
 from openai import APIError, PermissionDeniedError
 
-from havoc.core import execution
-from havoc.core.agents import AgentCoordinator
-from havoc.llm import request_log
+from baz.core import execution
+from baz.core.agents import AgentCoordinator
+from baz.llm import request_log
 
 
 if TYPE_CHECKING:
@@ -62,7 +62,7 @@ async def _run(
 
     monkeypatch.setattr(Runner, "run_streamed", _fake_run_streamed)
     coordinator = coordinator or AgentCoordinator()
-    await coordinator.register("root", "strix", parent_id=None)
+    await coordinator.register("root", "baz", parent_id=None)
     return await execution._run_cycle(
         object(),
         coordinator,

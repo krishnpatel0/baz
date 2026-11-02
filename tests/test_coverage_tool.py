@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from havoc.tools.coverage.tools import (
+from baz.tools.coverage.tools import (
     _list_impl,
     _record_impl,
     _update_impl,
