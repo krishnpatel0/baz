@@ -5,6 +5,21 @@
 > a dork that returns noise is worse than no dork, because an agent burns turns
 > triaging it.
 
+## Call the tool, do not paste queries
+
+`dork_search(domain=..., phase=..., min_value="high", brand=..., keywords=...)`
+returns the queries below already rendered for your target, ordered, each with
+what a hit means and the next action. **Use it instead of composing queries by
+hand** — it drops queries whose tokens you have not supplied rather than
+returning them half-rendered, and it orders by value so you spend turns on
+`filetype:env` before `inurl:/wp-content/`.
+
+`dork_stats()` shows the arsenal size and phase distribution if you need to
+know what is available.
+
+Then run the returned queries with `web_search`. A hit on a secrets dork is an
+access primitive — pivot to it immediately rather than continuing recon.
+
 ## How agents use this
 
 Dorks are **passive recon**: no packet touches the target. They surface third
