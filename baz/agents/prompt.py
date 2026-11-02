@@ -82,6 +82,11 @@ def _resolve_skills(
     ordered.append("tooling/agent_browser")
     ordered.append("tooling/chrome_devtools")
     ordered.append("tooling/python")
+    # Version hunting is the recon-phase bridge into the 1-day engine: it
+    # teaches tech_detect -> cve_queue, which are otherwise two tools an agent
+    # has no reason to know go together. Small, and it prevents the exact
+    # failure seen on a live run — tools registered but never called.
+    ordered.append("reconnaissance/version_hunting")
     ordered.append("analysis/counterevidence")
     ordered.append("analysis/severity_calibration")
     # Hunting guidance is for hunters. Both skills change which mutations an
