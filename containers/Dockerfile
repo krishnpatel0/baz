@@ -13,6 +13,10 @@ RUN apt-get update && \
 ENV GOBIN=/out/bin
 RUN mkdir -p /out/bin && \
     go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest && \
+    go install -v github.com/lc/gau/v2/cmd/gau@latest 2>/dev/null || true; \
+    go install -v github.com/tomnomnom/waybackurls@latest 2>/dev/null || true; \
+    go install -v github.com/hahwul/dalfox/v2@latest 2>/dev/null || true; \
+    go install -v github.com/PentestPad/subzy@latest 2>/dev/null || true; \
     go install -v github.com/projectdiscovery/katana/cmd/katana@latest && \
     go install -v github.com/projectdiscovery/cvemap/cmd/vulnx@latest && \
     go install -v github.com/jaeles-project/gospider@latest && \
@@ -58,7 +62,17 @@ RUN apt-get update && \
     libcap2-bin \
     gdb \
     libnss3-tools \
-    chromium fonts-liberation
+    chromium fonts-liberation \
+    feroxbuster \
+    gobuster \
+    hydra \
+    hashcat \
+    whatweb \
+    nikto \
+    sslyze \
+    nbtscan \
+    massdns \
+    seclists
 
 
 RUN setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip $(which nmap)
@@ -223,6 +237,79 @@ RUN apt-get autoremove -y && \
 
 ENV PATH="/home/pentester/go/bin:/home/pentester/.local/bin:/home/pentester/.npm-global/bin:/app/.venv/bin:$PATH"
 ENV VIRTUAL_ENV="/app/.venv"
+
+
+# --- offensive tooling that skills reference but the image lacked -----------
+# Grouped with the reason each one is here, because a bare package list gives a
+# future maintainer no way to tell what is safe to drop.
+USER root
+RUN set -eux; \
+    # deserialization: the skill documents ysoserial chains with no generator
+    # ysoserial is a jar, so it needs a JRE the image did not carry
+    apt-get install -y --no-install-recommends default-jre-headless && \
+    curl -sSL -o /opt/ysoserial/ysoserial.jar \
+        "https://github.com/frohoff/ysoserial/releases/latest/download/ysoserial-all.jar" && \
+    printf '%s\n' '#!/bin/bash' \
+        'exec java -jar /opt/ysoserial/ysoserial.jar "$@"' \
+        > /usr/local/bin/ysoserial && \
+    chmod +x /usr/local/bin/ysoserial; \
+    # PHP gadget chains
+    git clone --depth 1 https://github.com/ambionics/phpggc.git /opt/phpggc && \
+    ln -sf /opt/phpggc/phpggc /usr/local/bin/phpggc && \
+    chmod +x /opt/phpggc/phpggc; \
+    # HTTP request smuggling: the http2_desync skill documents CL.TE/TE.CL with
+    # no detector
+    mkdir -p /opt/smuggler && \
+    curl -sSL -o /opt/smuggler/smuggler.py \
+        "https://raw.githubusercontent.com/defparam/smuggler/master/smuggler.py" && \
+    printf '%s\n' '#!/bin/bash' \
+        'exec python3 /opt/smuggler/smuggler.py "$@"' \
+        > /usr/local/bin/smuggler && \
+    chmod +x /usr/local/bin/smuggler; \
+    # command injection: commix is a git project, not a pipx package
+    git clone --depth 1 https://github.com/commixproject/commix.git /opt/commix 2>/dev/null || true; \
+    if [ -f /opt/commix/commix.py ]; then \
+        printf '%s\n' '#!/bin/bash' \
+            'exec python3 /opt/commix/commix.py "$@"' \
+            > /usr/local/bin/commix; \
+        chmod +x /usr/local/bin/commix; \
+    fi; \
+    # JWT key confusion: jwt_tool is already present; this adds the
+    # key-confusion path it does not cover
+    pipx install jwtxploiter 2>/dev/null || echo "jwtxploiter unavailable, skipping"
+ENV PATH="/root/go/bin:/opt/phpggc:$PATH"
+USER pentester
+
+# --- wordlists --------------------------------------------------------------
+# ffuf is close to useless without a list, and every scan that needed one was
+# downloading it first. Curated subsets, not full SecLists (1.5 GB).
+USER root
+RUN set -eux; \
+    mkdir -p /opt/wordlists/discovery /opt/wordlists/params \
+             /opt/wordlists/fuzz /opt/wordlists/passwords /opt/wordlists/usernames; \
+    SECLISTS=/usr/share/seclists; \
+    cp "$SECLISTS/Discovery/Web-Content/raft-medium-directories.txt" /opt/wordlists/discovery/medium.txt 2>/dev/null || true; \
+    cp "$SECLISTS/Discovery/Web-Content/raft-small-directories.txt" /opt/wordlists/discovery/short.txt 2>/dev/null || true; \
+    cp "$SECLISTS/Discovery/Web-Content/common.txt" /opt/wordlists/discovery/common.txt 2>/dev/null || true; \
+    cp "$SECLISTS/Discovery/Web-Content/api/objects.txt" /opt/wordlists/discovery/api.txt 2>/dev/null || true; \
+    cp "$SECLISTS/Discovery/Web-Content/backup-files.txt" /opt/wordlists/discovery/backup.txt 2>/dev/null || true; \
+    cp "$SECLISTS/Discovery/Web-Content/quickhits.txt" /opt/wordlists/discovery/quickhits.txt 2>/dev/null || true; \
+    for f in "$SECLISTS"/Fuzzing/*.txt; do \
+        [ -f "$f" ] && cp "$f" /opt/wordlists/fuzz/$(basename "$f"); \
+    done; \
+    cp "$SECLISTS/Passwords/Common-Credentials/10-million-password-list-top-1000.txt" /opt/wordlists/passwords/top1000.txt 2>/dev/null || true; \
+    cp "$SECLISTS/Usernames/top-usernames-shortlist.txt" /opt/wordlists/usernames/top100.txt 2>/dev/null || true; \
+    # ffuf/dirsearch/gobuster all default to looking here
+    mkdir -p /home/pentester/tools/wordlists; \
+    ln -sfn /opt/wordlists/discovery/medium.txt /home/pentester/tools/wordlists/dirs.txt; \
+    ln -sfn /opt/wordlists/discovery/common.txt /home/pentester/tools/wordlists/common.txt; \
+    ln -sfn /opt/wordlists/fuzz /home/pentester/tools/wordlists/fuzz; \
+    chown -R pentester:pentester /opt/wordlists /home/pentester/tools/wordlists; \
+    du -sh /opt/wordlists
+USER pentester
+
+RUN echo 'export WORDLISTS=/opt/wordlists' >> /home/pentester/.bashrc && \
+    echo 'export WORDLISTS=/opt/wordlists' >> /home/pentester/.profile
 
 WORKDIR /app
 
