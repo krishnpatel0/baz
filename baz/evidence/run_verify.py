@@ -7,11 +7,13 @@ readable and so this can be tested without standing up a whole scan.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from typing import Any
 
 from baz.evidence.export import export_run
 from baz.evidence.verify import FindingVerification, apply_outcomes, verify_findings
+from baz.report.model_severity import model_ratings_for
 from baz.report.severity import adjudicate, apply_adjudication, policy_from_report
 from baz.runtime import session_manager
 
@@ -98,10 +100,11 @@ def write_submission_export(reports: Any, run_dir: Any) -> dict[str, Any]:
         return {}
 
 
-def adjudicate_severities(
+async def adjudicate_severities(
     reports: Any,
     *,
     model_ratings: dict[str, tuple[str, str]] | None = None,
+    use_model: bool = True,
 ) -> dict[str, Any]:
     """Re-rate every finding against program policy and demonstrated impact.
 
@@ -109,14 +112,22 @@ def adjudicate_severities(
     after filing so it sees the evidence the filing produced. The model's own
     read is supplied per finding as ``{report_id: (rating, reasoning)}``.
 
+    With ``use_model`` and no ratings supplied, the model is asked for its own
+    read of each finding — the business-context input the rules cannot supply.
+    That call is advisory: if it fails, adjudication runs on policy, impact and
+    CVSS alone and the finding keeps a severity reasoned from those.
+
     Never raises: a finding keeps its filed severity if adjudication fails.
     """
-    model_ratings = model_ratings or {}
+    ratings = dict(model_ratings or {})
+    if use_model and not ratings and reports:
+        with contextlib.suppress(Exception):
+            ratings = await model_ratings_for(list(reports))
     counts: dict[str, int] = {"raised": 0, "lowered": 0, "unchanged": 0, "disqualified": 0}
     try:
         for report in reports or []:
             report_id = str(report.get("id") or "")
-            model_rating, model_note = model_ratings.get(report_id, ("", ""))
+            model_rating, model_note = ratings.get(report_id, ("", ""))
             result = adjudicate(
                 report,
                 policy=policy_from_report(report),

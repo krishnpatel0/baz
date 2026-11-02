@@ -778,7 +778,7 @@ async def run_baz_scan(
             _state = get_global_report_state()
             if _state is not None:
                 _reports = _state.get_existing_vulnerabilities()
-                adjudicate_severities(_reports)
+                await adjudicate_severities(_reports)
                 write_submission_export(_reports, _state.get_run_dir())
         for s in sessions_to_close:
             with contextlib.suppress(Exception):
