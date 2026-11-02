@@ -105,9 +105,9 @@ Examples:
   .baz/--target https://app.com --workspace-file ./openapi.yaml:specs/openapi.yaml
 
 Baz Cloud:
-  .baz/cloud login
-  .baz/cloud scans start --source . --yes --wait
-  .baz/cloud                      # list every cloud resource
+  baz cloud login
+  baz cloud scans start --source . --yes --wait
+  baz cloud                      # list every cloud resource
 
   Run a pentest in Baz Cloud     https://app.baz.ai
   Try Baz Enterprise             https://baz.ai/demo

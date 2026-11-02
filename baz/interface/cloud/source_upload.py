@@ -138,6 +138,37 @@ class SelectedFile:
     ctime_ns: int
 
 
+def _identity_changed(before: SelectedFile, current: os.stat_result) -> bool:
+    """Whether the file changed between selection and archiving.
+
+    Which fields are trustworthy is platform-specific, and getting this wrong
+    fails every upload rather than catching one bad file:
+
+    - **Windows** reports ``st_dev``/``st_ino`` values that do not round-trip
+      between an ``lstat`` taken on the selection path and an ``fstat`` taken on
+      the opened descriptor, and its ``st_ctime`` likewise differs between those
+      two calls for an unchanged file. Comparing either there rejects files that
+      never changed. Size and mtime remain exact.
+    - **POSIX** reports all four consistently, so they are compared and a file
+      swapped mid-archive is caught by identity rather than by timestamp luck.
+
+    Size is the load-bearing check on both: a rewrite that changes content
+    almost always changes length, and mtime catches same-length rewrites on
+    every platform.
+    """
+    if not stat.S_ISREG(current.st_mode) or current.st_size != before.size:
+        return True
+    if current.st_mtime_ns != before.mtime_ns:
+        return True
+    if os.name == "nt":
+        return False
+    return (
+        current.st_ctime_ns != before.ctime_ns
+        or current.st_dev != before.device
+        or current.st_ino != before.inode
+    )
+
+
 @dataclass(frozen=True)
 class SourceManifest:
     source: Path
@@ -597,14 +628,7 @@ def _write_archive(destination: Path, files: tuple[SelectedFile, ...]) -> None:
                 raise http.CloudError(f"could not safely read {item.archive_name}: {exc}") from exc
             with os.fdopen(descriptor, "rb") as source_file:
                 current = os.fstat(source_file.fileno())
-                if (
-                    not stat.S_ISREG(current.st_mode)
-                    or current.st_size != item.size
-                    or current.st_dev != item.device
-                    or current.st_ino != item.inode
-                    or current.st_mtime_ns != item.mtime_ns
-                    or current.st_ctime_ns != item.ctime_ns
-                ):
+                if _identity_changed(item, current):
                     raise http.CloudError(
                         f"{item.archive_name} changed while the source archive was being built; "
                         "retry."
@@ -624,15 +648,7 @@ def _write_archive(destination: Path, files: tuple[SelectedFile, ...]) -> None:
                         target.write(chunk)
                         remaining -= len(chunk)
                     final = os.fstat(source_file.fileno())
-                    if (
-                        source_file.read(1)
-                        or not stat.S_ISREG(final.st_mode)
-                        or final.st_size != item.size
-                        or final.st_dev != item.device
-                        or final.st_ino != item.inode
-                        or final.st_mtime_ns != item.mtime_ns
-                        or final.st_ctime_ns != item.ctime_ns
-                    ):
+                    if source_file.read(1) or _identity_changed(item, final):
                         raise http.CloudError(
                             f"{item.archive_name} changed while the source archive was being "
                             "built; retry."

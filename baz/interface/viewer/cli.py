@@ -1,4 +1,4 @@
-"""`.baz/view [<run>]` command: serve a run's viewer UI locally."""
+"""`baz view [<run>]` command: serve a run's viewer UI locally."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 def run_view(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(
-        prog=".baz/view",
+        prog="baz view",
         description="Open a local web view of a Baz run (live or finished).",
     )
     parser.add_argument(

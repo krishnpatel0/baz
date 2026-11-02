@@ -1,4 +1,4 @@
-"""`.baz/auth` — ChatGPT subscription sign-in (login / status / logout).
+"""`baz auth` — ChatGPT subscription sign-in (login / status / logout).
 
 Signing in only stores OAuth tokens (``~/.baz/subscription-auth.json``); model
 selection stays with ``BAZ_LLM``. A ``chatgpt/<model>`` BAZ_LLM runs on the
@@ -38,13 +38,13 @@ _CALLBACK_TIMEOUT_S = 300
 LOGIN_PROVIDER = "chatgpt"
 _ACCEPTED_PROVIDERS = frozenset({LOGIN_PROVIDER, codex.PROVIDER})
 
-_USAGE = "Usage:\n  .baz/auth login chatgpt [--manual]\n  .baz/auth status\n  .baz/auth logout"
+_USAGE = "Usage:\n  baz auth login chatgpt [--manual]\n  baz auth status\n  baz auth logout"
 
 
 def run_auth(argv: list[str]) -> int:
-    """Entry point for ``.baz/auth …``. Returns a process exit code."""
+    """Entry point for ``baz auth …``. Returns a process exit code."""
     console = Console()
-    # Bare `.baz/auth` (no subcommand) defaults to login.
+    # Bare `baz auth` (no subcommand) defaults to login.
     subcommand = argv[0] if argv else "login"
     rest = argv[1:]
 
@@ -67,7 +67,7 @@ def run_auth(argv: list[str]) -> int:
 
 
 def _login(console: Console, argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog=".baz/auth login", add_help=True)
+    parser = argparse.ArgumentParser(prog="baz auth login", add_help=True)
     parser.add_argument(
         "provider",
         nargs="?",
@@ -245,7 +245,7 @@ def _first(query: dict[str, list[str]], key: str) -> str | None:
 def _status(console: Console) -> int:
     record = codex.read_record()
     if record is None:
-        console.print("[yellow]Not signed in.[/] Run [cyan].baz/auth login chatgpt[/] to sign in.")
+        console.print("[yellow]Not signed in.[/] Run [cyan]baz auth login chatgpt[/] to sign in.")
         return 1
     settings = load_settings()
     console.print("[green]Signed in[/] with a ChatGPT subscription.")

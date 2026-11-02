@@ -281,6 +281,10 @@ def test_human_rendering_neutralizes_osc_and_csi_control_sequences() -> None:
         assert "\\x1b[2J\\x9b31m" in output
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Win32 rejects filenames containing OSC-52 control bytes",
+)
 def test_source_prompt_shows_paths_and_literal_confirmation(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

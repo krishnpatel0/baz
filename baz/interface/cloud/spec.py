@@ -1,4 +1,4 @@
-"""Declarative command table for `.baz/cloud`.
+"""Declarative command table for `baz cloud`.
 
 Each command maps one CLI verb to one managed API operation. The runner
 builds the argument parser and the HTTP request from this table, so the
@@ -1066,7 +1066,7 @@ SPEC: dict[str, dict[str, Cmd]] = {
         "request": Cmd(
             "POST",
             "/uploads/request",
-            "Request an upload URL. To scan local source, prefer `.baz/cloud scans start "
+            "Request an upload URL. To scan local source, prefer `baz cloud scans start "
             "--source DIR`, which packs, uploads, and starts the scan in one step.",
             body=(
                 P("file_name", required=True, help="File name."),

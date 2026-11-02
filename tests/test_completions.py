@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import sys
 from typing import Any
+
+import pytest
 
 from baz.interface.completions import completion_candidates, run_completions
 
@@ -127,6 +130,11 @@ def test_filesystem_completion_for_source_output_and_data(tmp_path: Any, monkeyp
     assert data == ["@request.json"]
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Win32 rejects filenames containing NUL-adjacent control characters "
+    "with OSError, so the fixture cannot be created",
+)
 def test_filesystem_completion_omits_terminal_control_names(
     tmp_path: Any, monkeypatch: Any, capsys: Any
 ) -> None:

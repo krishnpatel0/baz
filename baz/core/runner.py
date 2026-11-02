@@ -526,7 +526,7 @@ async def run_baz_scan(
                 mcp_requests = mcp_connection_requests
             mcp_requests = [
                 *mcp_requests,
-                *_browser_mcp_requests(bundle["session"], mcp_requests),
+                *await _browser_mcp_requests(bundle["session"], mcp_requests),
             ]
             if mcp_requests:
                 for request in mcp_requests:
@@ -731,7 +731,7 @@ async def run_baz_scan(
     except RateLimitError as exc:
         logger.warning(
             "Scan %s stopped: persistent rate limit from the LLM provider (%s). "
-            "Resume with .baz/--resume %s' once the limit clears.",
+            "Resume with `baz --resume %s` once the limit clears.",
             scan_id,
             exc,
             scan_id,

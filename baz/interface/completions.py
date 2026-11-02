@@ -33,11 +33,11 @@ def run_completions(argv: list[str]) -> int:
         return 0
     if not argv or argv[0] in ("-h", "--help", "help"):
         sys.stdout.write(
-            "Usage: .baz/completions <zsh|bash|fish>\n\n"
+            "Usage: baz completions <zsh|bash|fish>\n\n"
             "Enable tab completion for the current shell:\n"
-            "  zsh:  source <(.baz/completions zsh)\n"
-            "  bash: source <(.baz/completions bash)\n"
-            "  fish: .baz/completions fish | source\n"
+            "  zsh:  source <(baz completions zsh)\n"
+            "  bash: source <(baz completions bash)\n"
+            "  fish: baz completions fish | source\n"
         )
         return 0
     shell = argv[0].lower()
@@ -348,7 +348,7 @@ def _bash_script() -> str:
   local candidate
   while IFS= read -r candidate; do
     candidates+=("$candidate")
-  done < <(.baz/completions --candidates "${COMP_WORDS[@]:1:$COMP_CWORD}")
+  done < <(baz completions --candidates "${COMP_WORDS[@]:1:$COMP_CWORD}")
   COMPREPLY=("${candidates[@]}")
   for candidate in "${COMPREPLY[@]}"; do
     if [[ $candidate == */ ]]; then
@@ -367,7 +367,7 @@ def _fish_script() -> str:
     return r"""function __baz_candidates
   set -l words (commandline -opc)
   set -e words[1]
-  command .baz/completions --candidates $words (commandline -ct)
+  command baz completions --candidates $words (commandline -ct)
 end
 complete -c .baz/-f -a '(__baz_candidates)'
 """

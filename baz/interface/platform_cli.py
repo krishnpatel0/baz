@@ -1,4 +1,4 @@
-"""`.baz/cloud login` — managed platform sign-in (app.baz.ai).
+"""`baz cloud login` — managed platform sign-in (app.baz.ai).
 
 Signing in runs an OAuth 2.0 device authorization flow in the browser, creates
 the Baz account and workspace when they do not exist yet, and stores a
@@ -90,7 +90,7 @@ def logout() -> bool:
 
 
 def run_login(argv: list[str]) -> int:
-    """Entry point for ``.baz/cloud login``. Returns a process exit code."""
+    """Entry point for ``baz cloud login``. Returns a process exit code."""
     console = Console()
     subcommand = argv[0] if argv else None
 
@@ -102,7 +102,7 @@ def run_login(argv: list[str]) -> int:
 
 
 def _login(console: Console, argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog=".baz/cloud login", add_help=True)
+    parser = argparse.ArgumentParser(prog="baz cloud login", add_help=True)
     parser.add_argument(
         "--no-browser",
         action="store_true",
@@ -180,7 +180,7 @@ def _login(console: Console, argv: list[str]) -> int:
         )
         console.print(
             f"[dim]Check that {_terminal_markup(AUTH_PATH.parent)} is writable, "
-            "then run `.baz/cloud login` again.[/]"
+            "then run `baz cloud login` again.[/]"
         )
         return 1
     _revoke_replaced_legacy_session(previous_record, record)
@@ -293,7 +293,7 @@ def _run_device_flow(  # noqa: PLR0912, PLR0915
             break
         interval = min(interval + delta, _MAX_POLL_INTERVAL_S)
 
-    raise PlatformAuthError("the sign-in request expired. Run `.baz/cloud login` again.")
+    raise PlatformAuthError("the sign-in request expired. Run `baz cloud login` again.")
 
 
 def _handle_poll_error(poll: requests.Response) -> int | None:
@@ -647,14 +647,14 @@ def _print_success(console: Console, record: dict[str, Any]) -> None:
     console.print(f"  Token:     stored in [dim]{_terminal_markup(AUTH_PATH)}[/]")
     console.print()
     console.print(
-        "[dim]The managed platform is ready. Run `.baz/cloud` to list the commands. "
+        "[dim]The managed platform is ready. Run `baz cloud` to list the commands. "
         "See https://docs.app.baz.ai for the API reference.[/]"
     )
 
 
 def _status(console: Console, argv: list[str]) -> int:  # noqa: PLR0912
     parser = _SessionArgumentParser(
-        prog=".baz/cloud whoami",
+        prog="baz cloud whoami",
         description="Show the stored managed-platform account, workspace, scopes, and expiry.",
     )
     parser.add_argument("--json", action="store_true", help="Print the session as JSON.")
@@ -677,7 +677,7 @@ def _status(console: Console, argv: list[str]) -> int:  # noqa: PLR0912
         if as_json:
             sys.stdout.write(json.dumps({"signed_in": False, "error": "Not signed in"}) + "\n")
             return 1
-        console.print("[yellow]Not signed in.[/] Run [bold].baz/cloud login[/] to sign in.")
+        console.print("[yellow]Not signed in.[/] Run [bold]baz cloud login[/] to sign in.")
         return 1
     email = record.get("email", "unknown")
     organization = record.get("organization_name") or record.get("organization_id", "")
@@ -723,7 +723,7 @@ def _scope_summary(record: dict[str, Any]) -> str:
 
 def _logout(console: Console, argv: list[str]) -> int:  # noqa: PLR0911, PLR0912
     parser = _SessionArgumentParser(
-        prog=".baz/cloud logout",
+        prog="baz cloud logout",
         description="Revoke this CLI session and remove its token from this machine.",
     )
     parser.add_argument("--json", action="store_true", help="Print the result as JSON.")

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from typing import TYPE_CHECKING
 
 import pytest
@@ -463,6 +464,11 @@ def test_saved_string_setting_is_not_json_decoded(tmp_path: Path) -> None:
     assert loader.load_settings().llm.model == '{"not": "decoded"}'
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Windows has no POSIX permission bits; st_mode reports 0o666 for any "
+    "writable file regardless of what the loader chmods",
+)
 def test_persist_current_sets_0600_mode(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("BAZ_LLM", "persisted-model")
     target = tmp_path / "cli-config.json"

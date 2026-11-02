@@ -231,7 +231,7 @@ def run_package_upgrade(console: Console, method: str) -> bool:
             f"Run it manually: [#60a5fa]{get_upgrade_command(method)}[/]"
         )
         return False
-    console.print("[#22c55e]✓ .baz/updated — restart the scan to use the new version[/]")
+    console.print("[#22c55e]✓ baz updated — restart the scan to use the new version[/]")
     return True
 
 

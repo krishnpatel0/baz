@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -195,6 +196,11 @@ def test_check_mountable_dir_accepts_a_project_under_the_home_root(
     check_mountable_dir(project)
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="'/etc' does not exist on Windows, so target inference rejects it as "
+    "invalid before the mount policy is consulted",
+)
 def test_infer_target_type_applies_the_mount_policy() -> None:
     with pytest.raises(ValueError, match="Refusing to mount"):
         infer_target_type("/etc")
