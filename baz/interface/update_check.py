@@ -422,5 +422,5 @@ def self_update(console: Console | None = None, version: str | None = None) -> b
         return False
 
     _write_cache(latest_version=latest, checked_at=time.time())
-    console.print(f"[#22c55e]✓ Updated .baz/to {latest}[/]")
+    console.print(f"[#22c55e]✓ Updated baz to {latest}[/]")
     return True

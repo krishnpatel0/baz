@@ -124,7 +124,7 @@ Baz Cloud:
     parser.add_argument(
         "--update",
         action="store_true",
-        help="Update .baz/to the latest version and exit. Self-updates the "
+        help="Update baz to the latest version and exit. Self-updates the "
         "standalone binary install; for pip/pipx/uv installs, prints the "
         "matching upgrade command instead.",
     )
