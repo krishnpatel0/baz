@@ -50,7 +50,7 @@ from baz.core.inputs import (
 )
 from baz.core.paths import run_dir_for, runtime_state_dir
 from baz.core.sessions import open_agent_session
-from baz.evidence.run_verify import run_verification_pass
+from baz.evidence.run_verify import run_verification_pass, write_submission_export
 from baz.report.state import get_global_report_state
 from baz.runtime import session_manager
 from baz.telemetry import set_scan_phase
@@ -758,6 +758,15 @@ async def run_baz_scan(
                     image=image,
                     report_state=get_global_report_state(),
                     status_sink=status_sink,
+                )
+        # Platform-shaped submission export, written after verification so it
+        # carries the final verdicts rather than the filing-time optimism.
+        with contextlib.suppress(Exception):
+            _state = get_global_report_state()
+            if _state is not None:
+                write_submission_export(
+                    _state.get_existing_vulnerabilities(),
+                    _state.get_run_dir(),
                 )
         for s in sessions_to_close:
             with contextlib.suppress(Exception):

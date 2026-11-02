@@ -18,6 +18,7 @@ import re
 import secrets
 from datetime import datetime
 from io import BytesIO
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from markdown_it import MarkdownIt
@@ -38,6 +39,9 @@ from reportlab.platypus import (
     Table,
     TableStyle,
 )
+from reportlab.platypus import (
+    Image as PdfImage,
+)
 
 from baz.interface.viewer.transcript import (
     primary_target,
@@ -48,8 +52,6 @@ from baz.interface.viewer.transcript import (
 
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from markdown_it.token import Token
 
 
@@ -548,6 +550,47 @@ def _strip_code_fence(value: Any) -> Any:
     return match.group(2) if match else value
 
 
+_PDF_MAX_IMAGE_WIDTH = 160 * mm
+
+
+def _screenshot_flowables(
+    vuln: dict[str, Any], styles: dict[str, ParagraphStyle]
+) -> list[Flowable]:
+    """Embed a finding's evidence screenshots into the PDF.
+
+    Markdown reports already embed these inline; the PDF was ignoring them, so a
+    finding shipped as text there and with pictures in the .md. Same bundle, two
+    different products, which is exactly the re-work the evidence layer exists to
+    remove.
+
+    Scales to the text width and keeps each image with a blank-line separator, so
+    a tall screenshot does not wedge against the next section. A missing or
+    unreadable file is skipped rather than failing the report.
+    """
+    raw = vuln.get("evidence_bundle")
+    if not isinstance(raw, str):
+        return []
+    shots = Path(raw) / "screenshots"
+    if not shots.is_dir():
+        return []
+
+    flow: list[Flowable] = []
+    images = sorted(shots.glob("*.png"))
+    if not images:
+        return []
+    flow.append(Paragraph("SCREENSHOTS", styles["field_label"]))
+    for image_path in images:
+        try:
+            image = PdfImage(str(image_path))
+            # Clamp to the printable width; reportlab will otherwise overflow.
+            scale = min(1.0, _PDF_MAX_IMAGE_WIDTH / image.imageWidth)
+            image.drawWidth = image.imageWidth * scale
+            image.drawHeight = image.imageHeight * scale
+            flow.extend([KeepTogether([image]), Spacer(1, 6)])
+        except (OSError, ValueError):
+            continue
+    return flow
+
 def _field_block(
     styles: dict[str, ParagraphStyle], label: str, value: Any, *, code: bool = False
 ) -> list[Flowable]:
@@ -585,6 +628,7 @@ def _finding_flowables(
         header.append(Paragraph("&nbsp;&nbsp;".join(meta_bits), styles["meta_inline"]))
 
     story: list[Flowable] = [KeepTogether(header)]
+    story.extend(_screenshot_flowables(vuln, styles))
     story.extend(_field_block(styles, "Description", vuln.get("description")))
     story.extend(_field_block(styles, "Impact", vuln.get("impact")))
     story.extend(_field_block(styles, "Technical analysis", vuln.get("technical_analysis")))

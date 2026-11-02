@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from baz.evidence.export import export_run
 from baz.evidence.verify import FindingVerification, apply_outcomes, verify_findings
 from baz.runtime import session_manager
 
@@ -81,3 +82,16 @@ async def run_verification_pass(
         counts.get("skipped", 0),
     )
     return results
+
+
+def write_submission_export(reports: Any, run_dir: Any) -> dict[str, Any]:
+    """Write the platform-shaped submission export for a finished run.
+
+    Best-effort: an export failure must not cost the run its report. Returns an
+    empty manifest when there was nothing to export.
+    """
+    try:
+        return export_run(list(reports or []), run_dir)
+    except (OSError, ValueError):
+        logger.exception("submission export failed; report is unaffected")
+        return {}
