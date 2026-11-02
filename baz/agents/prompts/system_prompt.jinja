@@ -504,11 +504,18 @@ Default user: pentester (sudo available)
 
 {% if available_skills %}
 <available_skills>
-On-demand specialist skills. Spawn a specialist via `create_agent(skills=[...])`, or pull guidance inline for yourself via `load_skill(skills=[...])`. Anything wrapped in `<specialized_knowledge>` is already loaded for you.
+Skills you can pull on demand with `load_skill(skills=[...])`, or hand to a
+specialist via `create_agent(skills=[...])`. Anything already inlined above is
+omitted. Load the skill before guessing payloads, tool syntax, or methodology
+from memory.
 
 {% for category, skills in available_skills | dictsort -%}
 {% for skill in skills -%}
-- {{ category }}/{{ skill.name }}{% if skill.description %}: {{ skill.description }}{% endif %}
+{%- if skill.name in shared_skill_names -%}
+{%- elif skill.description and category in described_skill_categories -%}
+- {{ category }}/{{ skill.name }}: {{ skill.description }}
+{% else %}- {{ category }}/{{ skill.name }}
+{% endif -%}
 {% endfor -%}
 {% endfor -%}
 </available_skills>

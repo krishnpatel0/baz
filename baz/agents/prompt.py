@@ -20,6 +20,14 @@ _PROMPT_DIRNAME = "prompts"
 # Removed before the prompt is sent.
 CACHE_POINT = "<cache_point>"
 
+_DESCRIBED_SKILL_CATEGORIES: frozenset[str] = frozenset({"root", "custom", "extra"})
+"""Categories whose index entries keep their description.
+
+The built-in taxonomy is namespaced by meaning — `sql_injection`, `ssrf`,
+`cache_poisoning` tell an agent what they contain without a sentence. A
+user-registered skill directory has no such convention, so its entries need
+the description to be discoverable at all."""
+
 
 def _resolve_skills(
     *,
@@ -143,6 +151,11 @@ def render_system_prompt(
             shared_skill_names=[name for name in skill_content if name in shared],
             requested_skill_names=[name for name in skill_content if name not in shared],
             available_skills=get_available_skills(),
+            # Built-in skill names are self-describing ("sql_injection",
+            # "xxe"); user-supplied ones are not, so those keep their
+            # description in the index. Keeps discovery intact while the
+            # 78-entry built-in index stays at ~370 tokens instead of ~27k.
+            described_skill_categories=_DESCRIBED_SKILL_CATEGORIES,
             interactive=interactive,
             parallel_tool_calls=parallel_tool_calls,
             is_root=is_root,

@@ -175,10 +175,18 @@ def test_malformed_frontmatter_keeps_skill_body(tmp_path: Path) -> None:
     assert load_skills(["extra/broken"]) == {"broken": "broken body"}
 
 
-def test_system_prompt_renders_skill_descriptions() -> None:
+def test_system_prompt_indexes_builtin_skills_by_name() -> None:
+    """Built-ins are indexed by name only.
+
+    Their names are self-describing (`sql_injection`, `cache_poisoning`), and
+    listing all 78 with their prose descriptions cost ~27k tokens on every
+    model call. The description stays reachable through `load_skill`, which is
+    the path an agent takes before using the skill anyway.
+    """
     prompt = render_system_prompt(scan_mode="quick", is_root=True)
 
-    assert "- technologies/firebase: Firebase security testing covering" in prompt
+    assert "- technologies/firebase" in prompt
+    assert "- technologies/firebase:" not in prompt
 
 
 def test_system_prompt_omits_empty_skill_description(tmp_path: Path) -> None:
