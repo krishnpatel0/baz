@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -19,6 +20,12 @@ _PROMPT_DIRNAME = "prompts"
 # Marks where the system prompt is split so the part before it can be cached.
 # Removed before the prompt is sent.
 CACHE_POINT = "<cache_point>"
+
+_VULNERABILITY_SKILL_NAMES: frozenset[str] = frozenset(
+    path.stem
+    for path in (Path(__file__).resolve().parent.parent / "skills" / "vulnerabilities").glob("*.md")
+)
+"""Bare names of the vulnerability skills, for the hunting-guidance gate."""
 
 _DESCRIBED_SKILL_CATEGORIES: frozenset[str] = frozenset({"root", "custom", "extra"})
 """Categories whose index entries keep their description.
@@ -77,14 +84,19 @@ def _resolve_skills(
     ordered.append("tooling/python")
     ordered.append("analysis/counterevidence")
     ordered.append("analysis/severity_calibration")
-    # disclosed_patterns: what actually wins in accepted bug bounty reports,
-    # per class, distilled from public disclosures. Always loaded because it
-    # changes which mutations an agent tries, which is the difference between
-    # testing the feature and testing the fix.
-    ordered.append("analysis/disclosed_patterns")
-    # creative_hunting: the assumption-driven loop for bugs with no class name.
-    # Always loaded so novel findings are attempted, not just textbook ones.
-    ordered.append("analysis/creative_hunting")
+    # Hunting guidance is for hunters. Both skills change which mutations an
+    # agent tries, which is the difference between testing the feature and
+    # testing the fix — but they are 18.7 KB combined, and a recon or mapping
+    # agent tests nothing. Gate on whether this agent carries a vulnerability
+    # skill; root always gets them, since it directs the hunt.
+    # Callers pass a bare skill name ("sql_injection") or a categorised one
+    # ("vulnerabilities/sql_injection"); both mean the agent is hunting.
+    if is_root or any(
+        name.startswith("vulnerabilities/") or name.split("/")[-1] in _VULNERABILITY_SKILL_NAMES
+        for name in ordered
+    ):
+        ordered.append("analysis/disclosed_patterns")
+        ordered.append("analysis/creative_hunting")
     if is_root:
         ordered.append("coordination/root_agent")
     if is_whitebox:
