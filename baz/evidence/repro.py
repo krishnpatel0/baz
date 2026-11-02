@@ -110,8 +110,14 @@ class ReproResult:
     def ok(self) -> bool:
         return self.verdict is Verdict.REPRODUCED
 
-    def to_wire(self) -> dict[str, Any]:
-        return {
+    def to_wire(self, *, script: str | None = None) -> dict[str, Any]:
+        """Serialize for storage.
+
+        ``script`` is carried in the record because the end-of-scan verifier has
+        to re-run the exact program that was filed, from a fresh container. A
+        record without it cannot be verified, only believed.
+        """
+        payload: dict[str, Any] = {
             "verdict": str(self.verdict),
             "exit_code": self.exit_code,
             "duration_ms": self.duration_ms,
@@ -119,6 +125,9 @@ class ReproResult:
             "stdout": self.stdout[-MAX_OUTPUT_CHARS:],
             "stderr": self.stderr[-MAX_OUTPUT_CHARS:],
         }
+        if script is not None:
+            payload["script"] = script
+        return payload
 
     def summary(self, *, limit: int = 400) -> str:
         """One-paragraph description for a tool result or a timeline."""

@@ -139,9 +139,7 @@ class ContextSettings(BaseSettings):
     auto_compact: bool = Field(default=True, alias="BAZ_CONTEXT_AUTO_COMPACT")
     compact_buffer_tokens: int = Field(default=20_000, gt=0, alias="BAZ_CONTEXT_BUFFER_TOKENS")
     keep_tokens: int = Field(default=8_000, gt=0, alias="BAZ_CONTEXT_KEEP_TOKENS")
-    fallback_context_tokens: int = Field(
-        default=200_000, gt=0, alias="BAZ_CONTEXT_FALLBACK_TOKENS"
-    )
+    fallback_context_tokens: int = Field(default=200_000, gt=0, alias="BAZ_CONTEXT_FALLBACK_TOKENS")
     summary_max_tokens: int = Field(default=4_096, gt=0, alias="BAZ_CONTEXT_SUMMARY_TOKENS")
     tool_output_max_tokens: int = Field(default=8_000, gt=0, alias="BAZ_TOOL_OUTPUT_MAX_TOKENS")
     tool_output_max_lines: int = Field(default=2_000, gt=0, alias="BAZ_TOOL_OUTPUT_MAX_LINES")

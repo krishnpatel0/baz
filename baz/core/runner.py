@@ -50,6 +50,7 @@ from baz.core.inputs import (
 )
 from baz.core.paths import run_dir_for, runtime_state_dir
 from baz.core.sessions import open_agent_session
+from baz.evidence.run_verify import run_verification_pass
 from baz.report.state import get_global_report_state
 from baz.runtime import session_manager
 from baz.telemetry import set_scan_phase
@@ -256,6 +257,7 @@ async def run_baz_scan(
     budget_policy: BudgetPolicy = "stop",
     model: str | None = None,
     cleanup_on_exit: bool = True,
+    verify_findings_on_exit: bool = True,
     event_sink: StreamEventSink | None = None,
     root_instructions_override: str | None = None,
     extra_system_prompt_context: dict[str, Any] | None = None,
@@ -746,6 +748,17 @@ async def run_baz_scan(
         if root_id is not None:
             with contextlib.suppress(Exception):
                 await coordinator.cancel_descendants(root_id)
+        # Re-prove every replay-safe finding before the report is finalized.
+        # This is the last moment a finding can be checked against something
+        # other than the session state that produced it.
+        if verify_findings_on_exit:
+            with contextlib.suppress(Exception):
+                await run_verification_pass(
+                    scan_id=scan_id,
+                    image=image,
+                    report_state=get_global_report_state(),
+                    status_sink=status_sink,
+                )
         for s in sessions_to_close:
             with contextlib.suppress(Exception):
                 s.close()

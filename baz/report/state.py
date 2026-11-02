@@ -657,6 +657,7 @@ class ReportState:
         result: Any,
         *,
         replay_safe: bool,
+        script: str | None = None,
     ) -> bool:
         """Record the outcome of executing a finding's reproduction.
 
@@ -664,8 +665,16 @@ class ReportState:
         whether the end-of-scan verifier may run this repro again. A destructive
         exploit is verified once and never replayed; conflating the two would
         either replay something harmful or leave a safe finding unverified.
+
+        ``script`` is stored too: the verifier re-runs the exact program that
+        was filed, so the record has to carry it rather than point at a sandbox
+        path that will not exist in a fresh container.
         """
-        payload = result.to_wire() if hasattr(result, "to_wire") else dict(result)
+        payload = (
+            result.to_wire(script=script)
+            if hasattr(result, "to_wire")
+            else {**dict(result), **({"script": script} if script else {})}
+        )
         for report in self.vulnerability_reports:
             if report.get("id") == report_id:
                 report["reproduction"] = {**payload, "replay_safe": bool(replay_safe)}
