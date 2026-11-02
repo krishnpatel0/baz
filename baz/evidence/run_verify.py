@@ -12,6 +12,7 @@ from typing import Any
 
 from baz.evidence.export import export_run
 from baz.evidence.verify import FindingVerification, apply_outcomes, verify_findings
+from baz.report.severity import adjudicate, apply_adjudication, policy_from_report
 from baz.runtime import session_manager
 
 
@@ -95,3 +96,37 @@ def write_submission_export(reports: Any, run_dir: Any) -> dict[str, Any]:
     except (OSError, ValueError):
         logger.exception("submission export failed; report is unaffected")
         return {}
+
+
+def adjudicate_severities(
+    reports: Any,
+    *,
+    model_ratings: dict[str, tuple[str, str]] | None = None,
+) -> dict[str, Any]:
+    """Re-rate every finding against program policy and demonstrated impact.
+
+    Runs after verification so it judges findings that survived re-proof, and
+    after filing so it sees the evidence the filing produced. The model's own
+    read is supplied per finding as ``{report_id: (rating, reasoning)}``.
+
+    Never raises: a finding keeps its filed severity if adjudication fails.
+    """
+    model_ratings = model_ratings or {}
+    counts: dict[str, int] = {"raised": 0, "lowered": 0, "unchanged": 0, "disqualified": 0}
+    try:
+        for report in reports or []:
+            report_id = str(report.get("id") or "")
+            model_rating, model_note = model_ratings.get(report_id, ("", ""))
+            result = adjudicate(
+                report,
+                policy=policy_from_report(report),
+                model_rating=model_rating or None,
+                model_reasoning=model_note,
+            )
+            apply_adjudication(report, result)
+            counts[result.direction] = counts.get(result.direction, 0) + 1
+            if result.disqualifiers:
+                counts["disqualified"] += 1
+    except (KeyError, ValueError, TypeError):
+        logger.exception("severity adjudication failed; findings keep filed severity")
+    return counts
