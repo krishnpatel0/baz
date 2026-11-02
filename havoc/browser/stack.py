@@ -107,9 +107,26 @@ class BrowserStack:
     allowed_tools: tuple[str, ...] | None = field(default=None)
 
 
+WORKSPACE_ROOT = "/workspace"
+"""The only directory the browser's file tools may touch.
+
+chrome-devtools-mcp refuses to read or write outside its configured roots, and
+defaults to the OS temp dir when the MCP client does not negotiate roots over
+the protocol. ``take_screenshot(filePath=...)`` into ``/workspace`` — where
+``view_image`` can see it and where the evidence bundle lives — therefore fails
+with "Access denied: path is not within any of the configured workspace roots"
+unless the root is passed explicitly.
+"""
+
+
 def _server_args() -> list[str]:
     """Arguments for the ``chrome-devtools-mcp`` child of the gateway."""
-    args = ["--headless", "--isolated", f"--executablePath={CHROME_BINARY}"]
+    args = [
+        "--headless",
+        "--isolated",
+        f"--executablePath={CHROME_BINARY}",
+        f"--filesystemRoot={WORKSPACE_ROOT}",
+    ]
     args.extend(PRIVACY_ARGS)
     args.extend(f"--chromeArg={arg}" for arg in CHROME_ARGS)
     args.extend(f"--category{category}=false" for category in DISABLED_CATEGORIES)

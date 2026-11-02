@@ -1,0 +1,48 @@
+# Line endings.
+#
+# This repo is developed on Windows as well as macOS and Linux. Git's
+# `core.autocrlf=true` (the Git for Windows default) rewrites text files to
+# CRLF on checkout, which silently breaks anything that has to stay LF:
+#
+#   - `containers/docker-entrypoint.sh` is COPYied into the image and run as
+#     `/bin/bash <script>`; a CRLF shebang makes the kernel look for an
+#     interpreter named `/bin/bash\r` and the container dies at startup with
+#     "exec ... no such file or directory", pointing at a file that plainly
+#     exists.
+#   - Shell scripts mounted or executed in the sandbox fail the same way.
+#
+# Force LF for every file the runtime, the shell, or a container executes.
+# Everything else keeps git's platform default.
+
+* text=auto
+
+*.sh              text eol=lf
+*.bash            text eol=lf
+Dockerfile        text eol=lf
+*.dockerfile      text eol=lf
+docker-entrypoint.sh text eol=lf
+
+*.py              text eol=lf
+*.jinja           text eol=lf
+*.md              text eol=lf
+*.toml            text eol=lf
+*.yaml            text eol=lf
+*.yml             text eol=lf
+*.json            text eol=lf
+
+# Windows-only scripts keep CRLF so cmd.exe can run them.
+*.bat             text eol=crlf
+*.cmd             text eol=crlf
+
+# Binaries: never touch.
+*.png             binary
+*.jpg             binary
+*.jpeg            binary
+*.gif             binary
+*.ico             binary
+*.pdf             binary
+*.zip             binary
+*.tar             binary
+*.gz              binary
+*.whl             binary
+*.pyc             binary
