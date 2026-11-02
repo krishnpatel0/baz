@@ -137,7 +137,7 @@ class BucketCandidate:
         return f"https://{self.name}.blob.core.windows.net/{{container}}/{{key}}"
 
 
-def generate(
+def generate(  # noqa: PLR0912
     brand: str,
     *,
     providers: tuple[Provider, ...] = (Provider.S3, Provider.GCS),
