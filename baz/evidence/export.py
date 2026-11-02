@@ -30,6 +30,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from baz.evidence.narrative import build_from_reports
+
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +104,24 @@ def immunefi_warnings(report: dict[str, Any]) -> list[str]:
     return warnings
 
 
+def _walkthrough(report: dict[str, Any]) -> str:
+    """Render the step/artifact walkthrough, or empty when there is nothing to map."""
+    raw = report.get("evidence_bundle")
+    if not isinstance(raw, str):
+        return ""
+    try:
+        narrative = build_from_reports(report, raw)
+    except (OSError, ValueError):
+        return ""
+    if not narrative.steps:
+        return ""
+    rendered = narrative.render()
+    # render() emits its own "## Reproduction Walkthrough" heading; the platform
+    # views already sit under "## Steps to Reproduce", so demote it to keep one
+    # heading per idea rather than two that say the same thing.
+    return rendered.replace("## Reproduction Walkthrough\n\n", "")
+
+
 def render_hackerone(report: dict[str, Any]) -> PlatformView:
     """The narrative form a HackerOne triager reads and re-runs."""
     title = _text(report.get("title")) or "Untitled finding"
@@ -110,9 +130,16 @@ def render_hackerone(report: dict[str, Any]) -> PlatformView:
     lines.extend(["## Summary", "", _text(report.get("description")) or "_none_", ""])
 
     lines.extend(["## Steps to Reproduce", ""])
-    steps = _text(report.get("poc_description"))
-    lines.append(steps or "_No step-by-step reproduction recorded._")
-    lines.append("")
+    walkthrough = _walkthrough(report)
+    if walkthrough:
+        # The generated walkthrough interleaves each step with the artifact that
+        # produced it, which is the form a triager can follow without scrolling.
+        lines.append(walkthrough)
+        lines.append("")
+    else:
+        steps = _text(report.get("poc_description"))
+        lines.append(steps or "_No step-by-step reproduction recorded._")
+        lines.append("")
 
     if code := _text(report.get("poc_script_code")):
         lines.extend(["### Proof of concept", "", "```", code, "```", ""])
@@ -178,7 +205,12 @@ def render_immunefi(report: dict[str, Any]) -> PlatformView:
     lines.extend(["## Description", "", _text(report.get("description")) or "_none_", ""])
 
     lines.extend(["## Steps to Reproduce", ""])
-    lines.append(_text(report.get("poc_description")) or "_No reproduction recorded._")
+    walkthrough = _walkthrough(report)
+    lines.append(
+        walkthrough.rstrip()
+        if walkthrough
+        else (_text(report.get("poc_description")) or "_No reproduction recorded._")
+    )
     lines.append("")
     if code := _text(report.get("poc_script_code")):
         lines.extend(["```", code, "```", ""])

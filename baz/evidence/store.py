@@ -35,6 +35,8 @@ from typing import TYPE_CHECKING, Any
 
 from PIL import Image, ImageDraw
 
+from baz.evidence.artifacts import PayloadArtifact, PayloadStore, capture_impact, classify_language
+
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -94,6 +96,60 @@ class EvidenceBundle:
     def http_dir(self) -> Path:
         return self.root / "http"
 
+    @property
+    def payload_dir(self) -> Path:
+        return self.root / "payload"
+
+    @property
+    def impact_dir(self) -> Path:
+        return self.root / "impact"
+
+    def payloads(self):
+        """The payload store for this finding, created on first use."""
+        return PayloadStore(self.root)
+
+    def record_payload(
+        self,
+        content: str,
+        *,
+        label: str,
+        step: int | None = None,
+        language: str | None = None,
+        produced: str = "",
+    ) -> str:
+        """Save the exact payload used and return its bundle-relative path.
+
+        Writes through the store so the extension matches the language — a
+        Python exploit stays a `.py`, a raw request becomes `.http` — because a
+        triager reading a 2,000-character SQLi payload should not also have to
+        guess whether it is a shell command.
+        """
+        store = PayloadStore(self.root)
+        # Reconcile with anything already written by an earlier call.
+        store.artifacts = _existing_payloads(store)
+        artifact = store.add(content, label=label, step=step, language=language, produced=produced)
+        if artifact is None:
+            return ""
+        store.write_manifest()
+        path = f"payload/{artifact.filename}"
+        self.register(self.root / path, kind="note", label=label, step=artifact.step or 1)
+        return path
+
+    def record_impact(
+        self,
+        records: list[Any],
+        *,
+        label: str = "sample-records",
+        total_seen: int | None = None,
+    ) -> str:
+        """Save proof data returned by the exploit; return its bundle path."""
+        evidence = capture_impact(self.root, records, label=label, total_seen=total_seen)
+        if evidence is None:
+            return ""
+        path = f"impact/{evidence.note}"
+        self.record(f"impact sample saved: {path}")
+        return path
+
     def record(self, message: str) -> None:
         """Append a timeline event. Cheap; call it liberally."""
         self.events.append((datetime.now(UTC).strftime("%H:%M:%S"), message))
@@ -151,10 +207,37 @@ class EvidenceBundle:
         return "\n".join(lines).rstrip() + "\n"
 
 
+def _existing_payloads(store: Any) -> list[Any]:
+    """Reload payload artifacts already on disk so steps do not restart at 1."""
+
+    if not store.dir.is_dir():
+        return []
+    found: list[Any] = []
+    for index, path in enumerate(sorted(store.dir.iterdir()), start=1):
+        if path.suffix in {".json"} and path.name == "manifest.json":
+            continue
+        if not path.is_file():
+            continue
+        try:
+            body = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        found.append(
+            PayloadArtifact(
+                filename=path.name,
+                language=classify_language(body),
+                content=body,
+                label=path.stem,
+                step=index,
+            )
+        )
+    return found
+
+
 def open_bundle(run_dir: Path, finding_id: str, title: str) -> EvidenceBundle:
     """Create the on-disk skeleton for a new finding."""
     root = run_dir / FINDINGS_DIRNAME / finding_id
-    for child in ("screenshots", "http", "console", "har", "notes"):
+    for child in ("screenshots", "http", "console", "har", "notes", "payload", "impact"):
         (root / child).mkdir(parents=True, exist_ok=True)
     bundle = EvidenceBundle(root=root, finding_id=finding_id, title=title)
     bundle.record(f"bundle opened for {title}")

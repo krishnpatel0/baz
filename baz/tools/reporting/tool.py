@@ -810,6 +810,9 @@ async def _do_create(  # noqa: PLR0911
     repro: str | None = None,
     replay_safe: bool = True,
     sandbox_session: Any = None,
+    payloads: list[dict[str, Any]] | None = None,
+    impact_samples: list[Any] | None = None,
+    impact_total_seen: int | None = None,
 ) -> dict[str, Any]:
     errors: list[str] = _validate_required_text(
         {
@@ -985,6 +988,12 @@ async def _do_create(  # noqa: PLR0911
         }
         bundle_dir = _open_evidence_bundle(report_state, report_id, title)
         if bundle_dir is not None:
+            _store_artifacts(
+                bundle_dir,
+                payloads=payloads,
+                impact_samples=impact_samples,
+                impact_total_seen=impact_total_seen,
+            )
             # Recorded on the finding so the report renderer can embed the
             # screenshots instead of only naming them.
             report_state.attach_evidence_bundle(report_id, str(bundle_dir))
@@ -1002,6 +1011,52 @@ _EVIDENCE_HINT = (
     "before you finish — a finding with no artifacts is a finding the hunter "
     "has to reproduce by hand."
 )
+
+
+def _store_artifacts(
+    bundle_dir: Path,
+    *,
+    payloads: list[dict[str, Any]] | None,
+    impact_samples: list[Any] | None,
+    impact_total_seen: int | None,
+) -> None:
+    """Write the exact payloads and the impact sample into the finding bundle.
+
+    Never fails the report: the finding is already stored, and an artifact that
+    could not be written is a packaging gap, not a reason to lose the finding.
+    """
+    if not payloads and not impact_samples:
+        return
+    try:
+        from baz.evidence import open_bundle
+
+        bundle = open_bundle(bundle_dir.parent.parent, bundle_dir.name, "artifacts")
+    except (OSError, ValueError):
+        logger.exception("could not open bundle for artifacts")
+        return
+
+    for index, entry in enumerate(payloads or [], start=1):
+        if not isinstance(entry, dict):
+            continue
+        content = entry.get("content")
+        if not isinstance(content, str) or not content.strip():
+            continue
+        try:
+            bundle.record_payload(
+                content,
+                label=str(entry.get("label") or f"payload-{index}"),
+                step=index,
+                language=entry.get("language"),
+                produced=str(entry.get("produced") or ""),
+            )
+        except (OSError, ValueError):
+            logger.exception("could not store payload %d", index)
+
+    if impact_samples:
+        try:
+            bundle.record_impact(impact_samples, total_seen=impact_total_seen)
+        except (OSError, ValueError):
+            logger.exception("could not store impact sample")
 
 
 def _open_evidence_bundle(
@@ -1108,6 +1163,9 @@ async def create_vulnerability_report(
     fix_pr_body: str | None = None,
     repro: str | None = None,
     replay_safe: bool = True,
+    payloads: list[dict[str, Any]] | None = None,
+    impact_samples: list[Any] | None = None,
+    impact_total_seen: int | None = None,
 ) -> str:
     """File a vulnerability report — one report per fully-verified finding.
 
@@ -1537,6 +1595,32 @@ async def create_vulnerability_report(
             never re-executed by the end-of-scan verifier. The harness
             also marks a repro unsafe on its own if it contains a
             destructive shell command.
+        payloads: Optional. The exact payloads used, in the order you used
+            them. Each entry is ``{"content": "...", "label": "..."}`` and
+            optionally ``"language"`` (``http``, ``python``, ``shell``,
+            ``javascript``) and ``"produced"`` (what it caused).
+
+            Saved verbatim into the finding as files whose extension
+            matches what they are — a raw request becomes `.http`, a
+            script becomes `.py`, a shell command `.sh` — so a triager
+            can read them without guessing. Language is detected from the
+            content when you do not say.
+
+            Include the payload that worked, not a cleaned-up version of
+            it. The value is that the triager sends exactly what you sent.
+        impact_samples: Optional. The actual data the exploit returned,
+            for exposed-data findings — a handful of representative
+            records, values intact. A triager judges "sensitive data
+            exposed" by looking at what came back; a described record
+            proves nothing.
+
+            Stored as found and bounded to a few records. Do not paste a
+            bulk dump: the point is to demonstrate the class of data,
+            not to copy the database.
+        impact_total_seen: Optional count of how many records the exploit
+            could reach in total, so the sample reads as a sample rather
+            than as the whole of what was exposed. ``137`` with three
+            stored records says more than three records alone.
     """
     (
         http_exchange_ids,
@@ -1588,6 +1672,9 @@ async def create_vulnerability_report(
         sandbox_session=(
             ctx.context.get("sandbox_session") if isinstance(ctx.context, dict) else None
         ),
+        payloads=payloads,
+        impact_samples=impact_samples,
+        impact_total_seen=impact_total_seen,
     )
     return json.dumps(_with_warning(result, http_exchange_warning), ensure_ascii=False, default=str)
 
