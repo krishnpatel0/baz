@@ -1766,14 +1766,13 @@ def resolve_workspace_files(specs: list[str] | None) -> list[dict[str, str]]:
         # rpartition(":") cannot be used naively: on Windows a bare "C:\\x"
         # spec would split at the drive colon and yield source "C". Only treat
         # the split as a DEST separator when what follows is not a drive root.
-        raw, sep, dest = spec.rpartition(":")
+        raw, sep, _dest = spec.rpartition(":")
         # Same discriminator as _workspace_file_dest: a DEST exists only when
         # the prefix is an existing file, which also protects Windows drive
         # colons — "C:\\x" leaves "C" as the prefix, which is not a file.
-        if sep and Path(raw.strip()).expanduser().is_file():
-            source_text = raw
-        else:
-            source_text = spec
+        source_text = (
+            raw if sep and Path(raw.strip()).expanduser().is_file() else spec
+        )
         source = Path(source_text.strip()).expanduser()
         if not source.is_file():
             raise ValueError(f"'{source}' is not an existing file")
