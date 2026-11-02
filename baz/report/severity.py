@@ -37,6 +37,8 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
+from baz.report.program_policy import resolve_policy
+
 
 logger = logging.getLogger(__name__)
 
@@ -453,26 +455,20 @@ _PROGRAM_HINT = re.compile(r"(?i)https?://([a-z0-9.-]+)|(?:program|platform)[:=]
 
 
 def policy_from_report(report: dict[str, Any]) -> PolicyProfile:
-    """Best-effort program profile from what the finding recorded.
+    """Program profile for a finding: declared first, then platform default.
 
-    Deliberately shallow: it reads a declared platform or program hint and any
-    explicit scale the agent recorded. Anything deeper — fetching live program
-    guidelines — is a separate, network-bound step the caller does before
-    adjudication, not something this function guesses at.
+    Delegates to :mod:`baz.report.program_policy`, which knows which platforms
+    publish a real taxonomy (Immunefi does) and which delegate to the program
+    (HackerOne does). When neither applies the profile is empty and adjudication
+    says so rather than inventing a scale.
     """
-    platform = str(report.get("platform") or "").strip().lower()
-    source = str(report.get("program_policy_source") or "")
-    raw_scale = report.get("program_severity_scale")
-    custom: dict[str, str] = {}
-    if isinstance(raw_scale, dict):
-        custom = {str(k): str(v) for k, v in raw_scale.items()}
-    out_of_scope = report.get("program_out_of_scope")
-    oos = tuple(str(x) for x in out_of_scope) if isinstance(out_of_scope, list) else ()
+    resolved = resolve_policy(report)
     return PolicyProfile(
-        platform=platform or "generic",
-        custom_scale=custom,
-        out_of_scope_impacts=oos,
-        source=source,
+        platform=str(resolved.get("platform") or "generic"),
+        custom_scale=dict(resolved.get("custom_scale") or {}),
+        out_of_scope_impacts=tuple(resolved.get("out_of_scope_impacts") or ()),
+        source=str(resolved.get("source") or ""),
+        notes=str(resolved.get("note") or ""),
     )
 
 
