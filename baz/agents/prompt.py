@@ -59,6 +59,11 @@ def _resolve_skills(
     ordered.append("tooling/python")
     ordered.append("analysis/counterevidence")
     ordered.append("analysis/severity_calibration")
+    # disclosed_patterns: what actually wins in accepted bug bounty reports,
+    # per class, distilled from public disclosures. Always loaded because it
+    # changes which mutations an agent tries, which is the difference between
+    # testing the feature and testing the fix.
+    ordered.append("analysis/disclosed_patterns")
     if is_root:
         ordered.append("coordination/root_agent")
     if is_whitebox:
