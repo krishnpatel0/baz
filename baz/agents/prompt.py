@@ -87,6 +87,10 @@ def _resolve_skills(
     # has no reason to know go together. Small, and it prevents the exact
     # failure seen on a live run — tools registered but never called.
     ordered.append("reconnaissance/version_hunting")
+    # working_memory: old tool output is evicted as a run progresses, so the
+    # discipline of recording conclusions is what keeps the scan coherent.
+    # Loaded always — it governs how every agent works, not what it tests.
+    ordered.append("analysis/working_memory")
     ordered.append("analysis/counterevidence")
     ordered.append("analysis/severity_calibration")
     # Hunting guidance is for hunters. Both skills change which mutations an

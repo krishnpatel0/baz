@@ -38,26 +38,29 @@ from baz.tools.reduce import reduce_output
 logger = logging.getLogger(__name__)
 
 
-KEEP_RECENT = 8
+KEEP_RECENT = 15
 """Tool results kept verbatim regardless of size.
 
-Eight covers the working set of a normal reasoning step — the last few
-observations and the retry that followed them — while the ninth and older are
-things the agent has already drawn a conclusion from.
+Twelve was the first figure, widened 20% to fifteen. The cost of keeping one
+more result is a few thousand tokens; the cost of evicting the one that turns
+out to matter is a wasted turn re-fetching it, or worse, a conclusion drawn
+without it. Whenever the trade is close, this module keeps more.
 """
 
-EVICT_ABOVE_TOKENS = 900
+EVICT_ABOVE_TOKENS = 1_100
 """Anything below this is not worth the stand-in's overhead.
 
-Roughly 3,600 characters. A stand-in costs ~60 tokens; evicting a 200-token
-result to save 140 is churn with no benefit.
+900 widened 20% to 1,100 — roughly 4,400 characters. A stand-in costs ~60
+tokens; evicting a 500-token result to save 440 is churn with no benefit, and
+the floor is deliberately high so small results are simply never touched.
 """
 
-MIN_STANDIN_SAVING = 3.0
+MIN_STANDIN_SAVING = 3.6
 """Only evict when the replacement is at least this much smaller.
 
-Prevents replacing a 1,000-token result with a 400-token summary for a 2.5x
-gain that will not survive the next few turns anyway.
+3.0 widened 20% to 3.6. Prevents replacing a result with a summary that saves
+a modest amount but loses the detail the agent might still want: below this
+ratio the space freed is not worth the round trip to get it back.
 """
 
 
@@ -70,6 +73,8 @@ class EvictionPlan:
     tokens_before: int = 0
     tokens_after: int = 0
     indices: list[int] = field(default_factory=list)
+    unrecorded: int = 0
+    """Evicted results with no recording call after them — the signal layer."""
 
     @property
     def saved(self) -> int:
@@ -79,18 +84,24 @@ class EvictionPlan:
         if not self.evicted:
             return f"eviction: nothing to do ({self.considered} results examined)"
         pct = (100 * self.saved // self.tokens_before) if self.tokens_before else 0
-        return (
+        line = (
             f"eviction: replaced {self.evicted} of {self.considered} tool results, "
             f"{self.tokens_before} -> {self.tokens_after} tokens ({pct}% smaller)"
         )
+        if self.unrecorded:
+            line += f"; {self.unrecorded} had no note written after them"
+        return line
 
 
 _EST_CHARS_PER_TOKEN = 4
 
 # Tool results arrive as text; the stand-in has to survive being re-sent as
 # part of the same message list, so it is plain text with the original handle.
-_STANDIN = (
-    "[{tool} output evicted after {turns} turns — {chars} chars, full text: {path}]\n{summary}"
+_STANDIN = "[{tool} output evicted after {turns} turns — {chars} chars]\n{path_line}{summary}"
+
+_NO_RECORD_MARKER = (
+    "\n! no note recorded after this result — if it mattered, record it now "
+    "(create_note / record_coverage) before it is compacted away"
 )
 
 
@@ -127,6 +138,41 @@ def _summarise(text: str) -> str:
     return "\n".join([lines[0], f"... {len(lines) - 2} lines omitted ...", lines[-1]])
 
 
+def _note_written_after(items: list[Any], index: int) -> bool:
+    """Whether any recording tool call happened after the result at ``index``.
+
+    The signal layer of the memory design: an agent may let old output go, but
+    it should be *told* when it is letting go of something it never wrote down.
+    Checked by looking for a call to one of the four durable stores, which are
+    the only things that outlive the transcript.
+    """
+    for later in items[index + 1 :]:
+        if not isinstance(later, dict):
+            continue
+        blob = str(later.get("name") or "")
+        if not blob:
+            content = later.get("content")
+            blob = content if isinstance(content, str) else ""
+        if any(tool in blob for tool in _RECORDING_TOOLS):
+            return True
+    return False
+
+
+_RECORDING_TOOLS = (
+    "create_note",
+    "update_note",
+    "record_coverage",
+    "update_coverage",
+    "amend_threat_model",
+    "save_threat_model",
+    "create_vulnerability_report",
+    "create_dependency_report",
+    "update_vulnerability_report",
+)
+"""The tools whose output outlives the transcript. A call to any of these after
+a tool result is evidence the agent extracted something durable from it."""
+
+
 def _is_tool_result(item: Any) -> bool:
     """Whether a session item is a tool result carrying bulk output."""
     if not isinstance(item, dict):
@@ -156,6 +202,21 @@ def _text_of(item: dict[str, Any]) -> str:
     return ""
 
 
+def _path_line(item: dict[str, Any]) -> str:
+    """The handle line for a stand-in, or an honest statement that none exists.
+
+    A stand-in that says "full text: (see output store)" tells the agent
+    nothing. This prefers a real path — the workspace spill the output_store
+    wrote, or a path the caller recorded — and otherwise says plainly that the
+    text is gone, so the agent knows to re-run rather than hunt for it.
+    """
+    for key in ("_spill_path", "spill_path", "artifact_path"):
+        value = item.get(key)
+        if isinstance(value, str) and value.strip():
+            return f"full text: {value}\n"
+    return "full text: not retained — re-run the command if you need it\n"
+
+
 def _replace_text(item: dict[str, Any], replacement: str) -> dict[str, Any]:
     """Return a copy of a tool-result item with its text payload replaced."""
     clone = dict(item)
@@ -180,6 +241,17 @@ def evict(items: list[Any], *, keep_recent: int = KEEP_RECENT) -> tuple[list[Any
     messages, plan steps and every decision the agent made stay exactly as they
     were: those are the thread of understanding, and the whole point is to
     preserve it while dropping raw bytes.
+
+    Four guards, all of them about not hiding something the agent still needs:
+
+    - recent results are never touched, however large
+    - a result smaller than :data:`EVICT_ABOVE_TOKENS` is left alone, because a
+      stand-in costs tokens too and saving 140 is churn
+    - a result whose reduction would save less than
+      :data:`MIN_STANDIN_SAVING` keeps its original form
+    - every stand-in states how many rows it dropped and carries the path to
+      the full text, so an agent that needs row 9,000 knows it exists and can
+      read it — eviction is *pointing*, never deleting
     """
     plan = EvictionPlan()
 
@@ -208,12 +280,16 @@ def evict(items: list[Any], *, keep_recent: int = KEEP_RECENT) -> tuple[list[Any
             tool=str(item.get("name") or item.get("tool") or "tool"),
             turns=turns_old,
             chars=len(text),
-            path=str(item.get("_spill_path") or "(see workspace output store)"),
+            path_line=_path_line(item),
             summary=summary,
         )
         after = _estimate_tokens(standin)
         if before < after * MIN_STANDIN_SAVING:
             continue
+
+        if not _note_written_after(items, index):
+            standin += _NO_RECORD_MARKER
+            plan.unrecorded += 1
 
         out[index] = _replace_text(item, standin)
         plan.evicted += 1

@@ -34,14 +34,15 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-MAX_TABLE_TOKENS = 12_000
+MAX_TABLE_TOKENS = 14_400
 """Ceiling on the rendered table, not on the findings it represents.
 
-Set from the configured tool-output budget: reducing to something the output
-bound would immediately truncate is pointless. When a table genuinely exceeds
-this — a scan returning 50,000 findings — rows are folded by *group* rather than
-by truncation: the table becomes per-severity and per-code counts, which still
-accounts for every finding.
+12,000 widened 20% to 14,400, so grouping kicks in only for genuinely enormous
+result sets. Set from the configured tool-output budget: reducing to something
+the output bound would immediately truncate is pointless. When a table does
+exceed this — a scan returning 50,000 findings — rows are folded by *group*
+rather than by truncation: the table becomes per-severity and per-code counts,
+which still accounts for every finding.
 """
 
 _ROWS_TOKEN_ESTIMATE = 6

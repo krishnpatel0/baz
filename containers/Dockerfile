@@ -288,15 +288,15 @@ RUN set -eux; \
     mkdir -p /opt/wordlists/discovery /opt/wordlists/params \
              /opt/wordlists/fuzz /opt/wordlists/passwords /opt/wordlists/usernames; \
     SECLISTS=/usr/share/seclists; \
+    [ -d "$SECLISTS" ] || SECLISTS=/usr/share/seclists-main; \
+    [ -d "$SECLISTS" ] || SECLISTS=/opt/seclists; \
     cp "$SECLISTS/Discovery/Web-Content/raft-medium-directories.txt" /opt/wordlists/discovery/medium.txt 2>/dev/null || true; \
     cp "$SECLISTS/Discovery/Web-Content/raft-small-directories.txt" /opt/wordlists/discovery/short.txt 2>/dev/null || true; \
     cp "$SECLISTS/Discovery/Web-Content/common.txt" /opt/wordlists/discovery/common.txt 2>/dev/null || true; \
     cp "$SECLISTS/Discovery/Web-Content/api/objects.txt" /opt/wordlists/discovery/api.txt 2>/dev/null || true; \
     cp "$SECLISTS/Discovery/Web-Content/backup-files.txt" /opt/wordlists/discovery/backup.txt 2>/dev/null || true; \
     cp "$SECLISTS/Discovery/Web-Content/quickhits.txt" /opt/wordlists/discovery/quickhits.txt 2>/dev/null || true; \
-    for f in "$SECLISTS"/Fuzzing/*.txt; do \
-        [ -f "$f" ] && cp "$f" /opt/wordlists/fuzz/$(basename "$f"); \
-    done; \
+    find "$SECLISTS/Fuzzing" -maxdepth 1 -name '*.txt' -exec cp {} /opt/wordlists/fuzz/ \; 2>/dev/null || true; \
     cp "$SECLISTS/Passwords/Common-Credentials/10-million-password-list-top-1000.txt" /opt/wordlists/passwords/top1000.txt 2>/dev/null || true; \
     cp "$SECLISTS/Usernames/top-usernames-shortlist.txt" /opt/wordlists/usernames/top100.txt 2>/dev/null || true; \
     # ffuf/dirsearch/gobuster all default to looking here
@@ -313,7 +313,7 @@ RUN echo 'export WORDLISTS=/opt/wordlists' >> /home/pentester/.bashrc && \
 
 WORKDIR /app
 
-ARG CAIDO_VERSION=0.56.0
+ARG CAIDO_VERSION=0.58.3
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then \
         CAIDO_ARCH="x86_64"; \
@@ -322,7 +322,17 @@ RUN ARCH=$(uname -m) && \
     else \
         echo "Unsupported architecture: $ARCH" && exit 1; \
     fi && \
-    wget -O caido-cli.tar.gz "https://caido.download/releases/v${CAIDO_VERSION}/caido-cli-v${CAIDO_VERSION}-linux-${CAIDO_ARCH}.tar.gz" && \
+    # caido.download is intermittently unreachable; a single failed curl must
+    # not lose the whole build, so retry with backoff before giving up.
+    url="https://caido.download/releases/v${CAIDO_VERSION}/caido-cli-v${CAIDO_VERSION}-linux-${CAIDO_ARCH}.tar.gz"; \
+    for attempt in 1 2 3 4 5; do \
+        if curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 20 -o caido-cli.tar.gz "$url"; then \
+            break; \
+        fi; \
+        echo "caido download attempt $attempt failed, retrying"; \
+        sleep 5; \
+    done; \
+    test -s caido-cli.tar.gz || { echo "caido download failed after 5 attempts: $url"; exit 1; }; \
     tar -xzf caido-cli.tar.gz && \
     chmod +x caido-cli && \
     rm caido-cli.tar.gz && \
