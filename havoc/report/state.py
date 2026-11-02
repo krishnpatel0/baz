@@ -651,6 +651,27 @@ class ReportState:
                 return True
         return False
 
+    def attach_reproduction(
+        self,
+        report_id: str,
+        result: Any,
+        *,
+        replay_safe: bool,
+    ) -> bool:
+        """Record the outcome of executing a finding's reproduction.
+
+        ``replay_safe`` is stored alongside the verdict because it decides
+        whether the end-of-scan verifier may run this repro again. A destructive
+        exploit is verified once and never replayed; conflating the two would
+        either replay something harmful or leave a safe finding unverified.
+        """
+        payload = result.to_wire() if hasattr(result, "to_wire") else dict(result)
+        for report in self.vulnerability_reports:
+            if report.get("id") == report_id:
+                report["reproduction"] = {**payload, "replay_safe": bool(replay_safe)}
+                return True
+        return False
+
     def get_existing_vulnerabilities(self) -> list[dict[str, Any]]:
         return list(self.vulnerability_reports)
 

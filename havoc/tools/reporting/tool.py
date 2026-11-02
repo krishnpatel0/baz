@@ -779,7 +779,7 @@ def _do_delete(
     }
 
 
-async def _do_create(
+async def _do_create(  # noqa: PLR0911
     *,
     title: str,
     description: str,
@@ -807,6 +807,9 @@ async def _do_create(
     fix_pr_body: str | None = None,
     agent_id: str | None = None,
     agent_name: str | None = None,
+    repro: str | None = None,
+    replay_safe: bool = True,
+    sandbox_session: Any = None,
 ) -> dict[str, Any]:
     errors: list[str] = _validate_required_text(
         {
@@ -859,6 +862,23 @@ async def _do_create(
         cvss_score, severity, _vector = _calculate_cvss(cvss_breakdown)
     except ValueError as exc:
         return {"success": False, "error": "Validation failed", "errors": [str(exc)]}
+
+    repro_result = await _gate_reproduction(
+        repro=repro,
+        replay_safe=replay_safe,
+        poc_script_code=poc_script_code,
+        sandbox_session=sandbox_session,
+    )
+    if repro_result is not None and repro_result.verdict.value in ("failed", "timeout", "unsafe"):
+        return {
+            "success": False,
+            "error": (
+                "Reproduction did not run cleanly, so the finding was not filed. "
+                "Fix the repro script and file again — a finding the harness cannot "
+                "reproduce is not evidence."
+            ),
+            "repro": repro_result.to_wire(),
+        }
 
     try:
         from havoc.report.state import get_global_report_state
@@ -970,6 +990,9 @@ async def _do_create(
             report_state.attach_evidence_bundle(report_id, str(bundle_dir))
             result["evidence_dir"] = str(bundle_dir)
             result["evidence_hint"] = _EVIDENCE_HINT
+        if repro_result is not None:
+            report_state.attach_reproduction(report_id, repro_result, replay_safe=replay_safe)
+            result["repro"] = repro_result.to_wire()
         return result
 
 
@@ -1006,6 +1029,39 @@ def _open_evidence_bundle(
         logger.exception("could not open evidence bundle for %s", report_id)
         return None
     return bundle.root
+
+
+async def _gate_reproduction(
+    *,
+    repro: str | None,
+    replay_safe: bool,
+    poc_script_code: str,
+    sandbox_session: Any,
+) -> Any:
+    """Run the finding's repro before it is filed.
+
+    Returns ``None`` when there is nothing to run or no sandbox to run it in.
+    The caller then files the report without a reproduction record, which is
+    exactly the state the end-of-scan verifier flags.
+
+    Falls back to ``poc_script_code`` when no dedicated repro is supplied: the
+    PoC already in the report is the reproduction unless the agent says
+    otherwise, which keeps the gate useful without a second required field.
+    """
+    if sandbox_session is None:
+        return None
+    script = (repro or "").strip() or (poc_script_code or "").strip()
+    if not script:
+        return None
+
+    from havoc.evidence import ReproRequest, is_replay_safe, run_repro
+
+    request = ReproRequest(script=script, replay_safe=replay_safe and is_replay_safe(script))
+    try:
+        return await run_repro(sandbox_session, request)
+    except Exception:
+        logger.exception("reproduction gate failed; filing without a repro record")
+        return None
 
 
 def _caller_identity(ctx: RunContextWrapper) -> tuple[str | None, str | None]:
@@ -1050,6 +1106,8 @@ async def create_vulnerability_report(
     confidence_rationale: str | None = None,
     fix_verification: str | None = None,
     fix_pr_body: str | None = None,
+    repro: str | None = None,
+    replay_safe: bool = True,
 ) -> str:
     """File a vulnerability report — one report per fully-verified finding.
 
@@ -1455,6 +1513,30 @@ async def create_vulnerability_report(
             fix (summary + rationale). Prose/markdown only — the code
             change itself belongs in ``code_locations``. Omit for
             black-box findings.
+        repro: Optional. A self-contained program that demonstrates the
+            finding, run by the harness **before** the report is filed.
+            Bash or Python; the interpreter is picked from the content.
+            It runs from ``/workspace`` inside the scan sandbox with the
+            proxy already configured, so it should reach the target the
+            same way your testing did.
+
+            Exit 0 means reproduced. Non-zero, a timeout, or a destructive
+            command aborts the filing and returns the failure to you. If
+            you omit this, ``poc_script_code`` is used — provide whichever
+            one actually runs end to end, not a transcript of what you
+            did by hand.
+
+            Write it so it proves *the claim*, not just that something
+            responded: assert on the response body, the status, the
+            reflected payload, the callback. Print what you asserted
+            against so the log is readable.
+        replay_safe: Default ``True``. Set ``False`` for findings whose
+            reproduction is itself destructive — race conditions,
+            double-spend, an unauthorized write, anything that mutates
+            target state. Those run exactly once, at filing time, and are
+            never re-executed by the end-of-scan verifier. The harness
+            also marks a repro unsafe on its own if it contains a
+            destructive shell command.
     """
     (
         http_exchange_ids,
@@ -1501,6 +1583,11 @@ async def create_vulnerability_report(
         fix_pr_body=fix_pr_body,
         agent_id=agent_id,
         agent_name=agent_name,
+        repro=repro,
+        replay_safe=replay_safe,
+        sandbox_session=(
+            ctx.context.get("sandbox_session") if isinstance(ctx.context, dict) else None
+        ),
     )
     return json.dumps(_with_warning(result, http_exchange_warning), ensure_ascii=False, default=str)
 
