@@ -62,6 +62,16 @@ def _resolve_skills(
     ordered.append(f"scan_modes/{scan_mode}")
     if is_diff_scoped:
         ordered.append("scan_modes/diff")
+    # Browser tooling is on demand, not always-loaded. Measured: a live recon
+    # scan never invoked agent-browser once, while its 20.5 KB body rode on
+    # every model call to every agent. The skill is discoverable by name in
+    # the index and `load_skill` pulls it in when the agent actually opens a
+    # page — which is the only moment it can matter.
+    # The browser *core* loop is always loaded (2.5 KB) because a screenshot
+    # reaches the model only through view_image and that guidance has to be
+    # present before an agent decides to take one. The 20 KB CLI reference
+    # rides behind tooling/agent_browser_reference, loaded when a page is
+    # actually being driven — a live recon scan never opened one.
     ordered.append("tooling/agent_browser")
     ordered.append("tooling/chrome_devtools")
     ordered.append("tooling/python")
