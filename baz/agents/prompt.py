@@ -64,6 +64,9 @@ def _resolve_skills(
     # changes which mutations an agent tries, which is the difference between
     # testing the feature and testing the fix.
     ordered.append("analysis/disclosed_patterns")
+    # creative_hunting: the assumption-driven loop for bugs with no class name.
+    # Always loaded so novel findings are attempted, not just textbook ones.
+    ordered.append("analysis/creative_hunting")
     if is_root:
         ordered.append("coordination/root_agent")
     if is_whitebox:

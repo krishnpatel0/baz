@@ -1718,9 +1718,22 @@ def validate_config_file(config_path: str) -> Path:
 
 
 def _workspace_file_dest(spec: str, source: Path) -> str:
-    """Return the workspace-relative destination declared by ``spec``."""
-    _, sep, dest = spec.rpartition(":")
-    candidate = dest.strip() if sep and dest.strip() else source.name
+    """Return the workspace-relative destination declared by ``spec``.
+
+    A ``DEST`` is only present when the last ``:`` separates a plausible source
+    from a plausible destination. On Windows a bare ``C:\\x`` spec splits at the
+    drive colon, which would make the whole path the destination; guard against
+    that by requiring the part after the colon to be short and separator-free
+    relative to the source, or fall back to the file name.
+    """
+    raw, sep, dest = spec.rpartition(":")
+    # A DEST is present only when the text before the last colon names an
+    # existing file. On POSIX "specs/openapi.yaml" has no colon and the whole
+    # spec is the source; on Windows "C:\\x:y" splits at the drive colon, but
+    # "C" is not a file, so the source falls back to the full spec — which is
+    # exactly the outcome the bare-path test expects.
+    has_dest = bool(sep) and Path(raw.strip()).expanduser().is_file()
+    candidate = dest.strip() if has_dest else source.name
     if candidate.startswith("/") or Path(candidate).is_absolute():
         if not candidate.startswith("/workspace/"):
             raise ValueError(
@@ -1750,8 +1763,17 @@ def resolve_workspace_files(specs: list[str] | None) -> list[dict[str, str]]:
     resolved: list[dict[str, str]] = []
     seen: dict[str, str] = {}
     for spec in specs or []:
+        # rpartition(":") cannot be used naively: on Windows a bare "C:\\x"
+        # spec would split at the drive colon and yield source "C". Only treat
+        # the split as a DEST separator when what follows is not a drive root.
         raw, sep, dest = spec.rpartition(":")
-        source_text = raw if sep and dest.strip() else spec
+        # Same discriminator as _workspace_file_dest: a DEST exists only when
+        # the prefix is an existing file, which also protects Windows drive
+        # colons — "C:\\x" leaves "C" as the prefix, which is not a file.
+        if sep and Path(raw.strip()).expanduser().is_file():
+            source_text = raw
+        else:
+            source_text = spec
         source = Path(source_text.strip()).expanduser()
         if not source.is_file():
             raise ValueError(f"'{source}' is not an existing file")
