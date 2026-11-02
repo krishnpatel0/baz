@@ -14,6 +14,7 @@ Design notes:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import mimetypes
@@ -120,9 +121,16 @@ class _ViewerState:
         run_dir: Path,
         assets_dir: Path,
         steer_handler: Callable[[str, str], bool] | None = None,
+        frame_grabber: Any = None,
     ) -> None:
         self.run_dir = run_dir
         self.assets_dir = assets_dir
+        # Set only when the viewer runs inside a live scan with a sandbox
+        # browser. Absent for finished runs, where there is nothing live to show.
+        self.frame_grabber = frame_grabber
+        # The scan's loop, so the synchronous HTTP handler can await a capture
+        # without owning the grabber's scheduler.
+        self.event_loop: Any = None
         # The baz_runs directory that holds the launched run; used to
         # enumerate and resolve other runs for the history list.
         self.base_dir = run_dir.parent
@@ -234,7 +242,9 @@ def _make_handler(state: _ViewerState) -> type[BaseHTTPRequestHandler]:
             self.send_response(HTTPStatus.NO_CONTENT)
             self.end_headers()
 
-        def _handle_api(self, path: str, query: dict[str, list[str]]) -> None:
+        def _handle_api(  # noqa: PLR0911
+            self, path: str, query: dict[str, list[str]]
+        ) -> None:
             # The cross-run history list (/api/runs) unlocks its entries only for
             # a caller that holds this process's session capability *and* is
             # email verified, so merely reaching an exposed --host port never
@@ -248,7 +258,17 @@ def _make_handler(state: _ViewerState) -> type[BaseHTTPRequestHandler]:
             if path == "/api/capabilities":
                 # Steering is only possible when the viewer shares a live scan's
                 # coordinator + event loop (the TUI launcher wires a handler).
-                self._send_json(HTTPStatus.OK, {"can_steer": state.steer_handler is not None})
+                # The live viewport needs the same liveness plus a browser.
+                self._send_json(
+                    HTTPStatus.OK,
+                    {
+                        "can_steer": state.steer_handler is not None,
+                        "can_view_browser": state.frame_grabber is not None,
+                    },
+                )
+                return
+            if path == "/api/browser/frame":
+                self._handle_browser_frame()
                 return
             if path == "/api/auth/status":
                 self._handle_auth_status()
@@ -285,6 +305,52 @@ def _make_handler(state: _ViewerState) -> type[BaseHTTPRequestHandler]:
                 self._send_json(HTTPStatus.OK, build_run_state(run_dir))
             else:
                 self._send_json(HTTPStatus.NOT_FOUND, {"error": "unknown endpoint"})
+
+        def _handle_browser_frame(self) -> None:
+            """Serve the sandbox browser's current viewport as base64 JPEG.
+
+            Sits behind the same session gate as every other run endpoint: a
+            frame is a view of a live target, which is more sensitive than the
+            report, not less.
+            """
+            if not self._has_session():
+                self._send_json(HTTPStatus.FORBIDDEN, {"error": "forbidden"})
+                return
+            grabber = state.frame_grabber
+            if grabber is None:
+                # The viewer is usually launched from the TUI, which has no
+                # sandbox handle; the runner registers one when its browser is up.
+                from baz.interface.viewer.live_view import lookup
+
+                grabber = lookup()
+            if grabber is None:
+                self._send_json(HTTPStatus.NOT_FOUND, {"error": "no live browser"})
+                return
+            try:
+                frame = self._run_coro(grabber.grab())
+            except Exception:  # noqa: BLE001 - viewer decoration must not 500 the run
+                logger.debug("frame grab failed", exc_info=True)
+                self._send_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "capture failed"})
+                return
+            if frame is None:
+                self._send_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "no frame yet"})
+                return
+            from baz.interface.viewer.live_view import encode_frame
+
+            self._send_json(HTTPStatus.OK, encode_frame(frame))
+
+        def _run_coro(self, coro: Any) -> Any:
+            """Run an async grabber call from this synchronous handler thread.
+
+            The handler runs in its own thread with no event loop; the grabber
+            needs the scan's loop. ``run_coroutine_threadsafe`` bridges them
+            without blocking the loop for the duration of a screenshot beyond
+            the one call.
+            """
+            loop = getattr(state, "event_loop", None)
+            if loop is None:
+                raise RuntimeError("viewer has no event loop for async work")
+            return asyncio.run_coroutine_threadsafe(coro, loop).result(timeout=15)
 
         def _handle_auth_status(self) -> None:
             # The cached verified email is only disclosed to a caller holding this
@@ -559,6 +625,14 @@ def authorized_url(base_url: str, token: str) -> str:
     return f"{base_url}/?{urlencode({'token': token})}"
 
 
+def _current_loop() -> Any:
+    """The running loop, or None when serve() was called outside one."""
+    try:
+        return asyncio.get_running_loop()
+    except RuntimeError:
+        return None
+
+
 def serve(
     run_dir: Path,
     *,
@@ -566,6 +640,7 @@ def serve(
     port: int = 0,
     open_browser: bool = True,
     steer_handler: Callable[[str, str], bool] | None = None,
+    frame_grabber: Any = None,
 ) -> tuple[ThreadingHTTPServer, str, str]:
     """Start the viewer server on a background thread; return (server, url, token).
 
@@ -581,7 +656,15 @@ def serve(
     ``None`` (standalone ``.baz/view``), steering is reported unavailable.
     """
     assets_dir = bundle_dir()
-    state = _ViewerState(run_dir=run_dir, assets_dir=assets_dir, steer_handler=steer_handler)
+    state = _ViewerState(
+        run_dir=run_dir,
+        assets_dir=assets_dir,
+        steer_handler=steer_handler,
+        frame_grabber=frame_grabber,
+    )
+    # The frame grabber awaits inside the scan's loop; this handler is a plain
+    # synchronous HTTP server on its own thread, so it needs a handle to it.
+    state.event_loop = _current_loop()
     handler = _make_handler(state)
 
     try:
