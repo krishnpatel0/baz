@@ -22,7 +22,7 @@ from openai import (
     APITimeoutError,
 )
 
-from baz.config import codex
+from baz.config import codex, load_settings
 from baz.core.hooks import (
     SUBAGENT_TURN_LIMITS_KEY,
     TURN_LIMIT_KEY,
@@ -123,6 +123,32 @@ def _agent_tools_text(agent: Any) -> str:
         schema = getattr(tool, "params_json_schema", "") or ""
         parts.append(f"{name} {description} {schema}")
     return "\n".join(parts)
+
+
+async def _evict_session(session: Session, run_config: RunConfig) -> None:
+    """Replace aged tool results with compact stand-ins before compaction.
+
+    Reads the session, applies eviction when the size warrants it, and writes
+    back only if something changed. A no-op on small sessions, which is the
+    common case early in a run.
+    """
+    from baz.core.context_management import manage
+
+    items = list(await session.get_items())
+    if not items:
+        return
+
+    context_tokens = getattr(run_config, "context_tokens", None) or 0
+    if not context_tokens:
+        context_tokens = load_settings().context.fallback_context_tokens
+
+    rewritten, plan = manage(items, context_tokens=context_tokens)
+    if not plan.evicted:
+        return
+
+    await session.clear_session()
+    for item in rewritten:
+        await session.add_items([item])
 
 
 async def _compact_session(
@@ -788,6 +814,15 @@ async def _run_cycle(  # noqa: PLR0912, PLR0915
                         await enforce_image_budget(session, max_images)
                     except Exception:
                         logger.exception("image-budget enforcement failed for %s", agent_id)
+                # Cheapest context work first: reduction already ran when each
+                # tool result entered (agents/factory._bound_result), so this is
+                # eviction — replacing aged results the agent has already
+                # reasoned about. It runs *before* compaction because eviction
+                # is reversible (the text is on disk) and compaction is not.
+                try:
+                    await _evict_session(session, run_config)
+                except Exception:
+                    logger.exception("context eviction failed for %s", agent_id)
                 try:
                     await _compact_session(agent, session, run_config, force=False)
                 except Exception:
