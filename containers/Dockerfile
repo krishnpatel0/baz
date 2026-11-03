@@ -244,15 +244,32 @@ ENV VIRTUAL_ENV="/app/.venv"
 # future maintainer no way to tell what is safe to drop.
 USER root
 RUN set -eux; \
-    # deserialization: the skill documents ysoserial chains with no generator
-    # ysoserial is a jar, so it needs a JRE the image did not carry
-    apt-get install -y --no-install-recommends default-jre-headless && \
-    curl -sSL -o /opt/ysoserial/ysoserial.jar \
-        "https://github.com/frohoff/ysoserial/releases/latest/download/ysoserial-all.jar" && \
-    printf '%s\n' '#!/bin/bash' \
-        'exec java -jar /opt/ysoserial/ysoserial.jar "$@"' \
-        > /usr/local/bin/ysoserial && \
-    chmod +x /usr/local/bin/ysoserial; \
+    # deserialization: the skill documents ysoserial chains with no generator.
+    # ysoserial is a jar and needs a JRE the image did not carry.
+    #
+    # Split into its own RUN, and non-fatal. As one `&&` chain, the GitHub
+    # download is a single point of failure for the whole block: when it failed,
+    # the JRE install never ran either, so `java` was absent and the wrapper
+    # script was a dud that only failed at scan time. A missing tool that is
+    # silently absent is worse than one that reports itself missing.
+    if apt-get install -y --no-install-recommends default-jre-headless; then \
+        mkdir -p /opt/ysoserial; \
+        if curl -fsSL --retry 3 --retry-delay 2 -o /opt/ysoserial/ysoserial.jar \
+             "https://github.com/frohoff/ysoserial/releases/latest/download/ysoserial-all.jar" \
+           && command -v java >/dev/null 2>&1 \
+           && java -jar /opt/ysoserial/ysoserial.jar >/dev/null 2>&1; then \
+            printf '%s\n' '#!/bin/bash' \
+                'exec java -jar /opt/ysoserial/ysoserial.jar "$@"' \
+                > /usr/local/bin/ysoserial; \
+            chmod +x /usr/local/bin/ysoserial; \
+            echo "ysoserial installed and verified"; \
+        else \
+            rm -f /opt/ysoserial/ysoserial.jar /usr/local/bin/ysoserial; \
+            echo "WARNING: ysoserial not installed (download failed or jar unusable)"; \
+        fi; \
+    else \
+        echo "WARNING: default-jre-headless not installed; ysoserial unavailable"; \
+    fi; \
     # PHP gadget chains
     git clone --depth 1 https://github.com/ambionics/phpggc.git /opt/phpggc && \
     ln -sf /opt/phpggc/phpggc /usr/local/bin/phpggc && \
@@ -313,34 +330,54 @@ RUN echo 'export WORDLISTS=/opt/wordlists' >> /home/pentester/.bashrc && \
 
 WORKDIR /app
 
-ARG CAIDO_VERSION=0.58.3
-RUN ARCH=$(uname -m) && \
-    if [ "$ARCH" = "x86_64" ]; then \
-        CAIDO_ARCH="x86_64"; \
-    elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then \
-        CAIDO_ARCH="aarch64"; \
-    else \
-        echo "Unsupported architecture: $ARCH" && exit 1; \
-    fi && \
-    # caido.download is intermittently unreachable; a single failed curl must
-    # not lose the whole build, so retry with backoff before giving up.
-    url="https://caido.download/releases/v${CAIDO_VERSION}/caido-cli-v${CAIDO_VERSION}-linux-${CAIDO_ARCH}.tar.gz"; \
+ARG CAIDO_VERSION=
+
+# Resolve the Caido CLI version from their API rather than pinning one.
+#
+# A pinned version goes stale: 0.56.0 was delisted and every build failed with a
+# 404 that looked like a network fault. The API is authoritative and current, so
+# the build tracks upstream instead of breaking on their release cadence. Pin by
+# passing --build-arg CAIDO_VERSION=x.y.z when reproducibility matters.
+RUN set -eux; \
+    ARCH=$(uname -m); \
+    if [ "$ARCH" = "x86_64" ]; then CAIDO_ARCH="x86_64"; \
+    elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then CAIDO_ARCH="aarch64"; \
+    else echo "Unsupported architecture: $ARCH" && exit 1; fi; \
+    version="${CAIDO_VERSION}"; \
+    if [ -z "$version" ]; then \
+        version=$(curl -fsSL --retry 3 --connect-timeout 20 https://api.caido.io/releases/latest \
+            | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])'); \
+    fi; \
+    echo "installing caido-cli v${version} for ${CAIDO_ARCH}"; \
+    url="https://caido.download/releases/v${version}/caido-cli-v${version}-linux-${CAIDO_ARCH}.tar.gz"; \
     for attempt in 1 2 3 4 5; do \
-        if curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 20 -o caido-cli.tar.gz "$url"; then \
-            break; \
-        fi; \
-        echo "caido download attempt $attempt failed, retrying"; \
-        sleep 5; \
+        if curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 20 -o caido-cli.tar.gz "$url"; then break; fi; \
+        echo "attempt $attempt failed"; sleep 5; \
     done; \
-    test -s caido-cli.tar.gz || { echo "caido download failed after 5 attempts: $url"; exit 1; }; \
-    tar -xzf caido-cli.tar.gz && \
-    chmod +x caido-cli && \
-    rm caido-cli.tar.gz && \
-    mv caido-cli /usr/local/bin/
+    # Non-fatal on purpose. caido.download is unreachable from this build
+    # network on some hosts (curl: client returned ERROR on write, at the
+    # header stage, immediately) while downloading fine from a running
+    # container. The proxy is only needed at scan time, and the entrypoint
+    # installs the CLI on first use when it is missing — so a build network
+    # that cannot reach the CDN must not block the rest of the image.
+    if [ -s caido-cli.tar.gz ]; then \
+        tar -xzf caido-cli.tar.gz && \
+        chmod +x caido-cli && \
+        rm caido-cli.tar.gz && \
+        mv caido-cli /usr/local/bin/ && \
+        echo "caido-cli installed to /usr/local/bin/caido-cli"; \
+    else \
+        echo "WARNING: caido-cli not installed (caido.download unreachable from the build network);"; \
+        echo "         the entrypoint will install it on first use"; \
+    fi
 
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
+# /workspace is created as root: the preceding USER pentester switch would
+# otherwise make this fail, and the build stops here rather than at anything
+# to do with the workspace itself.
+USER root
 RUN mkdir -p /workspace && chown -R pentester:pentester /workspace /app
 
 USER pentester

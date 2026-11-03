@@ -38,6 +38,26 @@ if [ -n "${BAZ_CAIDO_ALLOWED_DOMAINS:-}" ]; then
   done
 fi
 
+# Install the CLI on first use when the image build could not fetch it (the
+# build network cannot always reach caido.download, though a running container
+# can). One retry loop, then a clear failure — a scan without a proxy is not a
+# scan, so this must not fail silently.
+if ! command -v caido-cli >/dev/null 2>&1; then
+  echo "caido-cli missing; fetching from api.caido.io ..."
+  _caido_version=$(curl -fsSL --retry 3 --connect-timeout 20 \
+      https://api.caido.io/releases/latest 2>/dev/null \
+      | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])' 2>/dev/null) || true
+  if [ -n "${_caido_version:-}" ]; then
+    _caido_url="https://caido.download/releases/v${_caido_version}/caido-cli-v${_caido_version}-linux-x86_64.tar.gz"
+    if curl -fsSL --retry 5 --retry-delay 3 --connect-timeout 20 -o /tmp/caido.tgz "$_caido_url"; then
+      tar -xzf /tmp/caido.tgz -C /tmp && chmod +x /tmp/caido-cli && \
+        sudo mv /tmp/caido-cli /usr/local/bin/ && rm -f /tmp/caido.tgz && \
+        echo "caido-cli v${_caido_version} installed"
+    fi
+  fi
+fi
+command -v caido-cli >/dev/null 2>&1 || { echo "ERROR: caido-cli unavailable; the scan proxy cannot start"; exit 1; }
+
 caido-cli --listen 0.0.0.0:${CAIDO_PORT} \
           --allow-guests \
           --no-logging \
