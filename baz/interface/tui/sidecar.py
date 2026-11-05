@@ -9,13 +9,21 @@ import os
 import secrets
 import socket
 import subprocess
+import threading
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
 
-_WINDOWS_AUTH_TIMEOUT = 10.0
+# How long to wait for the sidecar to connect back before giving up. This must
+# cover a cold build: the checkout path runs `go run`, which compiles the TUI
+# before it can connect, and a cold Go build cache routinely takes ~30s. 10s
+# timed out on a fresh checkout (verified) and made the TUI impossible to start.
+_WINDOWS_AUTH_TIMEOUT = 120.0
 _PROCESS_EXIT_TIMEOUT = 5.0
+# How often to check whether the sidecar exited while we are still waiting for
+# it to connect, so a sidecar that fails to start surfaces immediately.
+_WINDOWS_POLL_INTERVAL = 0.1
 _SENSITIVE_ENV_SUFFIXES = ("_API_KEY", "_ACCESS_KEY")
 _SENSITIVE_ENV_PARTS = frozenset(
     {"CREDENTIAL", "CREDENTIALS", "PASSWORD", "SECRET", "SECRETS", "TOKEN", "TOKENS"}
@@ -81,6 +89,44 @@ def _authenticate_connection(
     if not hmac.compare_digest(supplied, expected_token):
         raise PermissionError("TUI IPC authentication failed")
     connection.settimeout(None)
+
+
+
+def _accept_with_liveness(
+    listener: socket.socket,
+    expected_token: str,
+    process: subprocess.Popen[bytes],
+) -> socket.socket:
+    """Accept the sidecar's connection, failing fast if the sidecar exits first.
+
+    `go run` compiles before it starts, so a sidecar that fails to build exits
+    without ever connecting. Waiting out the full timeout would turn that into a
+    120s hang, so the process is polled while the accept proceeds.
+    """
+    result: dict[str, object] = {}
+
+    def run() -> None:
+        try:
+            result["connection"] = _accept_authenticated_connection(listener, expected_token)
+        except BaseException as exc:  # noqa: BLE001 - re-raised on the caller's thread
+            result["error"] = exc
+
+    thread = threading.Thread(target=run, daemon=True)
+    thread.start()
+    while thread.is_alive():
+        thread.join(_WINDOWS_POLL_INTERVAL)
+        if process.poll() is not None and not thread.is_alive():
+            break
+        if process.poll() is not None:
+            # The sidecar is gone; refuse to wait out the timeout.
+            raise TuiSidecarExitedError(process.returncode)
+    if "connection" in result:
+        return result["connection"]  # type: ignore[return-value]
+    raise result["error"]  # type: ignore[misc]
+
+
+class TuiSidecarExitedError(RuntimeError):
+    """The TUI sidecar exited before it connected to the backend."""
 
 
 def _accept_authenticated_connection(
@@ -167,7 +213,9 @@ async def _launch_windows_tui_process(
         host, port = listener.getsockname()[:2]
         env.update({"BAZ_TUI_ADDR": f"{host}:{port}", "BAZ_TUI_TOKEN": token})
         windows_process = subprocess.Popen(command, env=env, cwd=cwd)  # noqa: S603
-        connection = await asyncio.to_thread(_accept_authenticated_connection, listener, token)
+        connection = await asyncio.to_thread(
+            _accept_with_liveness, listener, token, windows_process
+        )
     except BaseException:
         await terminate_process(windows_process)
         raise

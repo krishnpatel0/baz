@@ -98,3 +98,6 @@ schema.graphql
 /.benchmarks/
 /references/
 /baz_runs_main/
+
+# Go TUI sidecar binary (built locally from baz/interface/tui)
+baz/bin/

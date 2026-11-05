@@ -6,7 +6,7 @@ A fork of Strix, extended into a deeper and more aggressive bug bounty tool.
 
 This repository is the **fork**. It is local only:
 
-- **Branch:** `havoc` — 46 commits ahead of upstream `main`
+- **Branch:** `havoc` — 48 commits ahead of upstream `main`
 - **Location:** `K:/bugggs/project-pentest/strix`
 - **Remote:** `origin` is upstream (`github.com/usestrix/strix`) and is **read-only
   in practice** — there is no fork on GitHub, no `origin/havoc`, and nothing has
