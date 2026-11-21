@@ -1,16 +1,19 @@
 # Baz
 
-A fork of Strix, extended into a deeper and more aggressive bug bounty tool.
+An autonomous AI penetration-testing tool, forked from Strix
+(<https://github.com/usestrix/strix>) and extended with a
+deeper, more aggressive bug-bounty workflow: browser DevTools control, evidence
+bundles, a reproduction gate, and submission-ready exports.
 
 ## Where things are
 
-This repository is the **fork**. It is local only:
+The canonical repository is **`https://github.com/krishnpatel0/baz`**, branch
+`main`. A local working clone lives at `K:/bugggs/project-pentest/strix`.
 
-- **Branch:** `havoc` — 48 commits ahead of upstream `main`
-- **Location:** `K:/bugggs/project-pentest/strix`
-- **Remote:** `origin` is upstream (`github.com/usestrix/strix`) and is **read-only
-  in practice** — there is no fork on GitHub, no `origin/havoc`, and nothing has
-  been pushed anywhere. Do not push to `origin`.
+- **Branch:** `baz`, published as `main`
+- **Push remote:** `baz` → `https://github.com/krishnpatel0/baz.git`
+- **`origin`** is upstream Strix and is **read-only in practice** — do not push
+  to it; it targets a repository we do not own.
 
 The **documentation is not in this repository.** It lives beside it, at:
 
@@ -27,7 +30,7 @@ adding a `docs/` tree would collide with upstream on every merge.
 ## Building
 
 ```bash
-cd strix
+cd baz
 uv run baz --version                    # .baz/1.7.0
 docker build -f containers/Dockerfile -t baz-sandbox:dev .
 cd baz/interface/tui && go build ./...  # the Go TUI
@@ -51,5 +54,11 @@ Wildcard targets must be quoted, or the shell globs them before Baz sees them.
 
 - The docs (`../docs/`)
 - Scan output (`baz_runs/` — local, per-run)
-- The Docker image (local Docker only, tag `baz-sandbox:dev`)
-- Any remote backup — nothing is pushed
+- The Docker image (built locally, tag `baz-sandbox:dev`)
+
+## License
+
+Baz is a derivative work of Baz and is distributed under the Apache License,
+Version 2.0. The original copyright notices and the `LICENSE` file are retained;
+see `LICENSE` and the Acknowledgements section of `README.md`. Only run Baz
+against systems you own or have explicit written permission to test.

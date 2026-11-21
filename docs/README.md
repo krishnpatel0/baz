@@ -1,6 +1,6 @@
-# Strix Documentation
+# Baz Documentation
 
-Documentation source files for Strix, powered by [Mintlify](https://mintlify.com).
+Documentation source files for Baz, powered by [Mintlify](https://mintlify.com).
 
 ## Local Preview
 

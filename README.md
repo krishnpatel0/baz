@@ -1,42 +1,14 @@
-<p align="center">
-  <a href="https://baz.ai/">
-    <img src="https://github.com/usebaz/.github/raw/main/imgs/cover.png" alt="Baz Banner" width="100%">
-  </a>
-</p>
-
 <div align="center">
 
 # Baz
 
-### The open-source AI pentesting tool. Autonomous AI hackers that find and fix your app’s vulnerabilities.
+### Autonomous AI penetration-testing agents that find and validate vulnerabilities in your app.
 
 <br/>
 
-
-<a href="https://docs.baz.ai"><img src="https://img.shields.io/badge/Docs-docs.baz.ai-2b9246?style=for-the-badge&logo=gitbook&logoColor=white" alt="Docs"></a>
-<a href="https://baz.ai"><img src="https://img.shields.io/badge/Website-baz.ai-f0f0f0?style=for-the-badge&logoColor=000000" alt="Website"></a>
-[![](https://dcbadge.limes.pink/api/server/baz-ai)](https://discord.gg/baz-ai)
-
-<a href="https://app.baz.ai?utm_source=github&utm_medium=readme&utm_content=badge_cloud"><img src="https://img.shields.io/badge/Baz%20Cloud-app.baz.ai-2b9246?style=for-the-badge&logoColor=white" alt="Baz Cloud"></a>
-<a href="https://baz.ai/demo?utm_source=github&utm_medium=readme&utm_content=badge_demo"><img src="https://img.shields.io/badge/Try%20Baz%20Enterprise-555555?style=for-the-badge&logoColor=white" alt="Try Baz Enterprise"></a>
-
-<a href="https://github.com/usebaz/baz"><img src="https://img.shields.io/github/stars/usebaz/baz?style=flat-square" alt="GitHub Stars"></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-3b82f6?style=flat-square" alt="License"></a>
-<a href="https://pypi.org/project/baz-agent/"><img src="https://img.shields.io/pypi/v/baz-agent?style=flat-square" alt="PyPI Version"></a>
-
-
-<a href="https://discord.gg/baz-ai"><img src="https://github.com/usebaz/.github/raw/main/imgs/Discord.png" height="40" alt="Join Discord"></a>
-<a href="https://x.com/baz_ai"><img src="https://github.com/usebaz/.github/raw/main/imgs/X.png" height="40" alt="Follow on X"></a>
-
-
-<a href="https://trendshift.io/repositories/15362?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-15362" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/15362/weekly" alt="usebaz%2Fbaz | Trendshift" width="250" height="55"/></a>
-<a href="https://trendshift.io/repositories/15362" target="_blank"><img src="https://trendshift.io/api/badge/repositories/15362" alt="usebaz/baz | Trendshift" width="250" height="55"/></a>
 
 </div>
-
-
-> [!TIP]
-> **New!** Baz integrates seamlessly with GitHub Actions and CI/CD pipelines. Automatically scan for vulnerabilities on every pull request and block insecure code before it reaches production - [Get started with no setup required](https://app.baz.ai?utm_source=github&utm_medium=readme&utm_content=tip_ci).
 
 ---
 
@@ -110,29 +82,23 @@ Installed with pipx, uv, or pip? `baz --update` prints the matching upgrade comm
 
 ## Ways to Run Baz
 
-- **Open Source** - free, runs locally with Docker and your own LLM key. [Quick Start](https://docs.baz.ai/quickstart)
-- **Baz Cloud** - no setup, validated findings, one-click autofix, and PR reviews. [Run a pentest →](https://app.baz.ai?intent=pentest&utm_source=github&utm_medium=readme&utm_content=table_cloud)
-- **Enterprise** - SSO, compliance-ready reports, VPC or self-hosted deployment. [Try Baz Enterprise →](https://baz.ai/demo?utm_source=github&utm_medium=readme&utm_content=table_demo)
+- **Self-hosted** — run Baz locally with Docker and your own LLM key. [Quick Start](#-quick-start)
+- **Hosted** — a managed deployment, for teams that would rather not run the
+  sandbox themselves.
 
 ---
 
-## ☁️ Baz Cloud
+## What Baz produces
 
-Try the Baz full-stack penetration testing platform at **[app.baz.ai](https://app.baz.ai?utm_source=github&utm_medium=readme&utm_content=cloud_heading)** - sign up for free, connect your repos and domains, and launch a pentest in minutes.
+Every finding ships with a reproduction and the evidence behind it:
 
-- **Validated findings with PoCs** - every vulnerability includes a working proof-of-concept exploit and reproduction steps
-- **One-click autofix** - AI-generated security patches as ready-to-merge pull requests
-- **Continuous pentesting** - always-on vulnerability scanning that keeps pace with your deployments
-- **DevSecOps integrations** - GitHub, GitLab, Bitbucket, Slack, Jira, Linear, and CI/CD pipelines
-- **Continuous learning** - AI that builds on past findings, adapts to your codebase, and reduces false positives over time
-
-[**Run a pentest →**](https://app.baz.ai?intent=pentest&utm_source=github&utm_medium=readme&utm_content=cloud_cta)
-
-## 🏢 Enterprise
-
-Get the same Baz experience with enterprise-grade controls: SSO (SAML/OIDC), custom compliance-ready penetration testing reports (SOC 2, ISO 27001, PCI DSS), dedicated support and SLA, custom deployment options (VPC or self-hosted), BYOK model support, and tailored AI pentesting agents optimized for your environment.
-
-[**Try Baz Enterprise →**](https://baz.ai/demo?utm_source=github&utm_medium=readme&utm_content=enterprise_cta)
+- **Validated findings with PoCs** — a working proof-of-concept and reproduction
+  steps, not a scanner signature
+- **Evidence bundles** — request/response, screenshots, console output, and a
+  timeline, written per finding
+- **A reproduction gate** — findings are re-run in a fresh sandbox before they
+  are reported
+- **Submission-ready exports** — HackerOne, Immunefi, and a triager package
 
 ---
 
@@ -363,23 +329,23 @@ See the [LLM Providers documentation](https://docs.baz.ai/llm-providers/overview
 
 ## Documentation
 
-Full documentation is available at **[docs.baz.ai](https://docs.baz.ai)** - including detailed guides for usage, CI/CD integrations, skills, and advanced configuration.
+Build, run, and configuration notes are in [`BAZ.md`](BAZ.md) and in the
+`docs/` tree kept alongside this checkout.
 
 ## Contributing
 
-We welcome contributions of code, docs, and new skills - check out our [Contributing Guide](https://docs.baz.ai/contributing) to get started or open a [pull request](https://github.com/usebaz/baz/pulls)/[issue](https://github.com/usebaz/baz/issues).
-
-## Join Our Community
-
-Have questions? Found a bug? Want to contribute? **[Join our Discord!](https://discord.gg/baz-ai)**
+This is a private fork; contributions are not being accepted from outside.
 
 ## Support the Project
 
-**Love Baz?** Give us a ⭐ on GitHub!
+Not accepting stars, sponsorship, or community sign-ups for this fork.
+
 
 ## Acknowledgements
 
-Baz builds on the incredible work of open-source projects like [LiteLLM](https://github.com/BerriAI/litellm), [Caido](https://github.com/caido/caido), [Nuclei](https://github.com/projectdiscovery/nuclei), [Playwright](https://github.com/microsoft/playwright), and [Bubble Tea](https://github.com/charmbracelet/bubbletea). Huge thanks to their maintainers!
+Baz is a fork of [Strix](https://github.com/usestrix/strix), distributed under the Apache
+License, Version 2.0, with the original copyright notices and `LICENSE` retained. It also
+builds on the work of [LiteLLM](https://github.com/BerriAI/litellm), [Caido](https://github.com/caido/caido), [Nuclei](https://github.com/projectdiscovery/nuclei), [Playwright](https://github.com/microsoft/playwright), and [Bubble Tea](https://github.com/charmbracelet/bubbletea). Huge thanks to their maintainers!
 
 
 > [!WARNING]
