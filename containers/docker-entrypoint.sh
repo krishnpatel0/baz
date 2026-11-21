@@ -44,6 +44,11 @@ fi
 # scan, so this must not fail silently.
 if ! command -v caido-cli >/dev/null 2>&1; then
   echo "caido-cli missing; fetching from api.caido.io ..."
+  # The proxy env is set for the scan, pointing at Caido itself. Downloading the
+  # Caido CLI through the not-yet-started Caido is a deadlock: verified failure
+  # is `curl: (7) Failed to connect ... over proxy 127.0.0.1`. Bypass the proxy
+  # for this download only.
+  unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY
   _caido_version=$(curl -fsSL --retry 3 --connect-timeout 20 \
       https://api.caido.io/releases/latest 2>/dev/null \
       | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])' 2>/dev/null) || true
@@ -56,7 +61,15 @@ if ! command -v caido-cli >/dev/null 2>&1; then
     fi
   fi
 fi
-command -v caido-cli >/dev/null 2>&1 || { echo "ERROR: caido-cli unavailable; the scan proxy cannot start"; exit 1; }
+# Do NOT exit if the CLI is missing. Exiting kills the container before the scan
+# starts, which surfaces as an opaque "exec transport error" from the SDK.
+# Warn loudly, then start without the proxy: the scan remains usable for targets
+# that do not need interception.
+if ! command -v caido-cli >/dev/null 2>&1; then
+  echo "ERROR: caido-cli unavailable; starting without the Caido proxy. HTTP" >&2
+  echo "traffic will not be captured or intercepted, so evidence will be incomplete." >&2
+  exec "$@"
+fi
 
 caido-cli --listen 0.0.0.0:${CAIDO_PORT} \
           --allow-guests \
@@ -145,6 +158,13 @@ echo "✅ CA added to browser trust store"
 
 mkdir -p /workspace/.agent-browser-screenshots
 
+# The browser DevTools MCP gateway is NOT started here. baz/browser/stack.py
+# owns it and starts it on every scan (connect() -> start_in_sandbox()), which
+# is where it can be restarted with the correct flags and released cleanly
+# before a restart. Starting a second copy in this entrypoint only guaranteed
+# a port collision on 48081: this script runs as root, so the later
+# `fuser -k 48081/tcp` from the non-root pentester exec session could not
+# release the root-owned listener, and the real gateway died with EADDRINUSE.
 echo "✅ Container ready"
 
 cd /workspace

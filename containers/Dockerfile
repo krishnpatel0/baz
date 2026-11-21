@@ -52,7 +52,7 @@ RUN apt-get update && \
     python3 python3-pip python3-venv python3-setuptools \
     net-tools dnsutils whois \
     file xxd \
-    jq parallel ripgrep grep \
+    jq parallel ripgrep grep psmisc \
     less procps htop \
     iproute2 iputils-ping netcat-traditional \
     nmap ncat ndiff \
@@ -232,8 +232,15 @@ RUN apt-get autoremove -y && \
     # Purge non-English locales (~160MB)
     find /usr/share/locale -mindepth 1 -maxdepth 1 -type d \
         ! -name 'en' ! -name 'en_US' ! -name 'C' -exec rm -rf {} + && \
-    # Remove package documentation and man pages not needed at runtime (~95MB)
-    rm -rf /usr/share/doc/* /usr/share/doc-base/* /usr/share/man/*
+    # Remove package documentation and man pages not needed at runtime (~95MB).
+    # Keep the man1 DIRECTORY itself: deleting it makes every later package
+    # whose maintainer script creates a man-page alternative fail in
+    # update-alternatives with "cannot create symbolic link
+    # /usr/share/man/man1/<name>.1.gz.dpkg-tmp: No such file or directory".
+    # That is exactly how the ysoserial JRE install died. Empty directories
+    # cost nothing; a missing one breaks dpkg.
+    rm -rf /usr/share/doc/* /usr/share/doc-base/* /usr/share/man/* && \
+    mkdir -p /usr/share/man/man1
 
 ENV PATH="/home/pentester/go/bin:/home/pentester/.local/bin:/home/pentester/.npm-global/bin:/app/.venv/bin:$PATH"
 ENV VIRTUAL_ENV="/app/.venv"
@@ -252,14 +259,49 @@ RUN set -eux; \
     # the JRE install never ran either, so `java` was absent and the wrapper
     # script was a dud that only failed at scan time. A missing tool that is
     # silently absent is worse than one that reports itself missing.
-    if apt-get install -y --no-install-recommends default-jre-headless; then \
+    # Both `apt-get update` and the man1 directory are required here:
+    #  - line ~231 wiped /var/lib/apt/lists/*, so apt cannot resolve the
+    #    package without a refresh ("Unable to locate package ...");
+    #  - the cleanup step deletes /usr/share/man/*, and without the man1
+    #    directory the JRE postinst fails in update-alternatives, which leaves
+    #    the package half-configured and java unusable. Verified in the build.
+    mkdir -p /usr/share/man/man1; \
+    if apt-get update >/dev/null 2>&1 && \
+       apt-get install -y --no-install-recommends default-jre-headless; then \
         mkdir -p /opt/ysoserial; \
+        # Two traps this block has already fallen into:
+        #  1. ysoserial with no args prints usage and exits 64, so requiring a
+        #     zero exit rejected a working jar;
+        #  2. on a modern JRE (this image ships JDK 25) ysoserial's reflection
+        #     is blocked by the module system and every gadget dies with
+        #     InaccessibleObjectException unless the JDK is told to open the
+        #     packages it reflects into.
+        # So the wrapper carries the --add-opens flags and verification proves
+        # the flags work: generate a real payload and check for the Java
+        # serialization magic bytes (ac ed), which no JVM output can fake.
         if curl -fsSL --retry 3 --retry-delay 2 -o /opt/ysoserial/ysoserial.jar \
              "https://github.com/frohoff/ysoserial/releases/latest/download/ysoserial-all.jar" \
-           && command -v java >/dev/null 2>&1 \
-           && java -jar /opt/ysoserial/ysoserial.jar >/dev/null 2>&1; then \
+          && command -v java >/dev/null 2>&1 \
+          && java \
+                 --add-opens=java.base/java.util=ALL-UNNAMED \
+                 --add-opens=java.base/java.lang.reflect=ALL-UNNAMED \
+                 --add-opens=java.base/java.text=ALL-UNNAMED \
+                 --add-opens=java.base/java.lang=ALL-UNNAMED \
+                 --add-opens=java.base/java.net=ALL-UNNAMED \
+                 --add-opens=java.base/java.io=ALL-UNNAMED \
+                 --add-opens=java.base/java.util.concurrent=ALL-UNNAMED \
+                 -jar /opt/ysoserial/ysoserial.jar CommonsCollections6 id 2>/dev/null \
+                 | head -c2 | od -An -tx1 | grep -qi 'ac ed'; then \
             printf '%s\n' '#!/bin/bash' \
-                'exec java -jar /opt/ysoserial/ysoserial.jar "$@"' \
+                'exec java \' \
+                '  --add-opens=java.base/java.util=ALL-UNNAMED \' \
+                '  --add-opens=java.base/java.lang.reflect=ALL-UNNAMED \' \
+                '  --add-opens=java.base/java.text=ALL-UNNAMED \' \
+                '  --add-opens=java.base/java.lang=ALL-UNNAMED \' \
+                '  --add-opens=java.base/java.net=ALL-UNNAMED \' \
+                '  --add-opens=java.base/java.io=ALL-UNNAMED \' \
+                '  --add-opens=java.base/java.util.concurrent=ALL-UNNAMED \' \
+                '  -jar /opt/ysoserial/ysoserial.jar "$@"' \
                 > /usr/local/bin/ysoserial; \
             chmod +x /usr/local/bin/ysoserial; \
             echo "ysoserial installed and verified"; \
