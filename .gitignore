@@ -101,3 +101,6 @@ schema.graphql
 
 # Go TUI sidecar binary (built locally from baz/interface/tui)
 baz/bin/
+
+# Agent scratch
+.mztmp/
