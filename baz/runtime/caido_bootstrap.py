@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from agents.sandbox.session import BaseSandboxSession
     from caido_sdk_client import Client
+    from caido_sdk_client.types import Project
 
 
 logger = logging.getLogger(__name__)
@@ -78,18 +79,42 @@ async def _login_as_guest(
     raise RuntimeError(f"loginAsGuest failed after {attempts} attempts: {last_err}")
 
 
+async def _select_or_create_project(client: Client) -> Project:
+    """Return the project to select: the existing one, else a fresh one.
+
+    Guest mode permits exactly one project, so the entrypoint's project is
+    reused rather than attempting a create that Caido would reject.
+    """
+    from caido_sdk_client.types import CreateProjectOptions
+
+    projects = await client.project.list()
+    if projects:
+        return projects[0]
+    return await client.project.create(
+        CreateProjectOptions(name="sandbox", temporary=True),
+    )
+
+
 async def bootstrap_caido(
     session: BaseSandboxSession,
     *,
     host_url: str,
     container_url: str,
 ) -> Client:
-    """Connect to the in-container Caido sidecar and select a fresh project."""
+    """Connect to the in-container Caido sidecar and select a project.
+
+    A project is selected rather than created unconditionally: Caido's proxy
+    answers every request with ``500`` until a project is selected, so a
+    projectless bootstrap means every proxied request in the meantime — the
+    agent's recon tools included — receives Caido's error page instead of the
+    target's response. The entrypoint selects one already, and Caido's guest
+    mode allows exactly one project, so a second ``create`` would fail with
+    ``PermissionDenied``.
+    """
     # The Caido SDK (and its generated GraphQL schema) is slow to import and is
     # only needed once a sandbox is actually being bootstrapped, so it is
     # imported here rather than at module scope.
     from caido_sdk_client import Client, TokenAuthOptions
-    from caido_sdk_client.types import CreateProjectOptions
 
     logger.info("Bootstrapping Caido client (host=%s, container=%s)", host_url, container_url)
 
@@ -101,9 +126,7 @@ async def bootstrap_caido(
         # teardown while the bootstrap is still in flight) would otherwise
         # leave the half-connected transport behind.
         await client.connect()
-        project = await client.project.create(
-            CreateProjectOptions(name="sandbox", temporary=True),
-        )
+        project = await _select_or_create_project(client)
         await client.project.select(project.id)
     except BaseException:
         # The client never reaches the session bundle if connect or project

@@ -110,7 +110,67 @@ fi
 
 sleep 2
 
-echo "Caido is up — host bootstraps the guest token + project via the Python SDK."
+# Select a Caido project before any traffic can flow.
+#
+# Caido's proxy answers **every** proxied request with `500 Internal Server
+# Error` until a project is selected — verified in-container: no project -> 500,
+# project created but not selected -> 500, selected -> 200. The host SDK
+# bootstrap (baz/runtime/caido_bootstrap.py) selects a project, but it does so
+# asynchronously while the container-wide http_proxy below is already live, so
+# everything the agent, the recon tools or the entrypoint itself sends in that
+# window receives Caido's 500 error page instead of the target's real response.
+#
+# Guests may own exactly one project, so the host's unconditional create would
+# also start failing with PermissionDenied once the project below exists; the
+# bootstrap was taught to reuse an existing project to match this.
+_caido_graphql() {
+  curl -fsS -X POST \
+       -H "Content-Type: application/json" \
+       -H "Authorization: Bearer ${_caido_token}" \
+       -d "$1" \
+       "http://127.0.0.1:${CAIDO_PORT}/graphql"
+}
+
+_caido_uuid_re='^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+
+_caido_token=$(curl -fsS -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"query":"mutation { loginAsGuest { token { accessToken } } }"}' \
+    "http://127.0.0.1:${CAIDO_PORT}/graphql" 2>/dev/null \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["loginAsGuest"]["token"]["accessToken"])' 2>/dev/null || true)
+
+# Validate every id before interpolating it into a mutation: a failed curl or a
+# GraphQL error body would otherwise be spliced straight into the query string.
+if [ -n "${_caido_token:-}" ]; then
+  _caido_project=""
+  while IFS= read -r _candidate; do
+    if [[ "$_candidate" =~ $_caido_uuid_re ]]; then
+      _caido_project="$_candidate"
+      break
+    fi
+  done < <(_caido_graphql '{"query":"{ projects { id } }"}' 2>/dev/null \
+    | python3 -c 'import json,sys; [print(p["id"]) for p in json.load(sys.stdin)["data"]["projects"]]' 2>/dev/null || true)
+
+  if [ -z "$_caido_project" ]; then
+    _caido_project=$(_caido_graphql '{"query":"mutation { createProject(input:{name:\"sandbox\",temporary:true}) { project { id } } }"}' 2>/dev/null \
+      | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["createProject"]["project"]["id"])' 2>/dev/null || true)
+    [[ "$_caido_project" =~ $_caido_uuid_re ]] || _caido_project=""
+  fi
+
+  if [ -n "$_caido_project" ] && _caido_graphql \
+       "{\"query\":\"mutation { selectProject(id: \\\"${_caido_project}\\\") { currentProject { project { id } } } }\"}" >/dev/null 2>&1; then
+    echo "Caido project selected: ${_caido_project}"
+  else
+    echo "WARNING: could not select a Caido project. Proxied requests return" >&2
+    echo "500 (Caido's 'no project selected' error) until the host bootstrap" >&2
+    echo "selects one; agent-visible traffic may be spoiled in the meantime." >&2
+  fi
+else
+  echo "WARNING: could not obtain a Caido guest token. Proxied requests return" >&2
+  echo "500 until the host bootstrap selects a project." >&2
+fi
+
+echo "Caido is up — the project selected above is reused by the host SDK bootstrap."
 
 echo "Configuring system-wide proxy settings..."
 
