@@ -294,53 +294,6 @@ async def run_agent_loop(
         request_log.reset_call_context(token)
 
 
-async def _handle_auto_resume(
-    coordinator: AgentCoordinator,
-    agent_id: str,
-) -> bool:
-    """Wake a parked agent that timed out; return False if it should stay parked.
-
-    A stalled agent is treated differently from one merely awaiting other
-    agents. It parked because several turns in a row ended without a tool call,
-    which spent its nudge budget; parking it again would leave a subtask that
-    still owes work unfinished forever, since an autonomous scan has no human
-    to message it. So the nudge budget is replenished and it gets another run at
-    calling a tool. An agent awaiting other agents has not stalled - it is
-    correctly idle - so it keeps the usual capped idle budget.
-    """
-    if await coordinator.wait_kind_of(agent_id) == "stalled":
-        logger.info(
-            "stalled agent %s reached its waiting timeout; auto-resuming with a fresh nudge budget",
-            agent_id,
-        )
-        await coordinator.reset_recovery(agent_id)
-        await coordinator.reset_idle_resumes(agent_id)
-    else:
-        idle_resumes = await coordinator.record_idle_resume(agent_id)
-        if idle_resumes >= _MAX_IDLE_AUTO_RESUMES:
-            logger.warning(
-                "agent %s auto-resumed %d times without hearing from anyone; "
-                "leaving it parked until a real message arrives",
-                agent_id,
-                idle_resumes,
-            )
-            await coordinator.park_waiting(agent_id, wait_kind="stalled")
-            await _notify_parent_on_stall(coordinator, agent_id)
-            return False
-        logger.info("agent %s reached its waiting timeout; auto-resuming", agent_id)
-
-    await coordinator.send(
-        agent_id,
-        {
-            "from": "system",
-            "type": "auto_resume",
-            "content": "Waiting timeout reached. Resuming execution.",
-        },
-        interrupt=False,
-    )
-    return True
-
-
 async def _run_agent_loop(
     *,
     agent: Any,
@@ -419,8 +372,28 @@ async def _run_agent_loop(
             # auto-resume is not: it must not hand a wedged agent a fresh budget.
             await coordinator.reset_recovery(agent_id)
             await coordinator.reset_idle_resumes(agent_id)
-        elif not await _handle_auto_resume(coordinator, agent_id):
-            continue
+        else:
+            idle_resumes = await coordinator.record_idle_resume(agent_id)
+            if idle_resumes >= _MAX_IDLE_AUTO_RESUMES:
+                logger.warning(
+                    "agent %s auto-resumed %d times without hearing from anyone; "
+                    "leaving it parked until a real message arrives",
+                    agent_id,
+                    idle_resumes,
+                )
+                await coordinator.park_waiting(agent_id, wait_kind="stalled")
+                await _notify_parent_on_stall(coordinator, agent_id)
+                continue
+            logger.info("agent %s reached its waiting timeout; auto-resuming", agent_id)
+            await coordinator.send(
+                agent_id,
+                {
+                    "from": "system",
+                    "type": "auto_resume",
+                    "content": "Waiting timeout reached. Resuming execution.",
+                },
+                interrupt=False,
+            )
 
         await coordinator.consume_pending(agent_id)
         with contextlib.suppress(BudgetPausedError):
@@ -747,15 +720,6 @@ _WAITING_AUTO_RESUME_TIMEOUT_S = 300.0
 # spending a model turn per timeout and leave it parked for a real message.
 _MAX_IDLE_AUTO_RESUMES = 3
 
-# A stalled agent is one whose last several turns ended without a tool call. The
-# nudge budget is exhausted, but the agent still has work to do and nobody will
-# message it: in an autonomous scan there is no human attached, so parking it
-# forever means the subtask silently never finishes and the parent burns its
-# whole timeout on a report that can no longer come. Give it a slower timer
-# instead of an infinite wait, so the nudge budget replenishes and it gets
-# another chance to call a tool.
-_STALLED_AUTO_RESUME_TIMEOUT_S = 900.0
-
 
 async def _plain_waiting_timeout(
     coordinator: AgentCoordinator,
@@ -765,10 +729,9 @@ async def _plain_waiting_timeout(
 
     Driven by what the agent is waiting on, not by where it sits in the graph:
     the user can message any agent, so an agent awaiting a human parks
-    indefinitely whether or not it is the root. An agent awaiting other agents
-    is re-checked on a timer, and so is a stalled one - just far more slowly,
-    since the thing that made it stall was its own turn budget rather than a
-    missing message.
+    indefinitely whether or not it is the root. Only an agent awaiting other
+    agents is re-checked on a timer, and only until it has spent its idle
+    budget re-parking without hearing anything.
     """
     async with coordinator._lock:
         status = coordinator.statuses.get(agent_id)
@@ -779,17 +742,9 @@ async def _plain_waiting_timeout(
         idle_resumes = coordinator.idle_resume_counts.get(agent_id, 0)
     if status != "waiting" or has_error or gated:
         return None
-    if wait_kind == "agents":
-        if idle_resumes >= _MAX_IDLE_AUTO_RESUMES:
-            return None
-        return _WAITING_AUTO_RESUME_TIMEOUT_S
-    if wait_kind == "stalled":
-        # Deliberately not capped on idle_resumes. That cap throttles an agent
-        # that keeps re-parking, but a stalled agent still owes work, and
-        # leaving it parked is the failure this timer exists to prevent. The
-        # slow interval is the throttle.
-        return _STALLED_AUTO_RESUME_TIMEOUT_S
-    return None
+    if wait_kind != "agents" or idle_resumes >= _MAX_IDLE_AUTO_RESUMES:
+        return None
+    return _WAITING_AUTO_RESUME_TIMEOUT_S
 
 
 async def _run_cycle_parked(
