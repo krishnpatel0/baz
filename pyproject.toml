@@ -238,6 +238,12 @@ ignore = [
 "tests/test_codex_auth.py" = ["S105", "S106", "SLF001"]
 # Hatchling loads the build hook by path, not as an importable package.
 "scripts/tui_sidecar_hook.py" = ["INP001"]
+# Evidence gathering is deliberately import-lazy: `baz.evidence` sits below the
+# reporting tool and the runner in the import graph, and a cycle here would
+# break scan startup. Broad excepts are the point of the module — a missing
+# screenshot must never cost the finding it belongs to.
+"baz/evidence/gather.py" = ["BLE001", "PLC0415"]
+"baz/evidence/backfill.py" = ["BLE001", "PLC0415"]
 # Stdlib HTTP handler overrides (do_GET/do_POST).
 "baz/interface/auth_cli.py" = ["N802"]
 "tests/test_codex_streaming.py" = ["N802"]

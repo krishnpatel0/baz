@@ -778,6 +778,25 @@ async def run_baz_scan(
                     report_state=get_global_report_state(),
                     status_sink=status_sink,
                 )
+        # Findings filed before the collection step ran — by an older build, or
+        # by a scan that was resumed rather than restarted — carry no bundle, so
+        # their report renders without proof. Backfill from whatever the sandbox
+        # still holds, then re-render, since the report cites its own bundle.
+        with contextlib.suppress(Exception):
+            _state = get_global_report_state()
+            if _state is not None:
+                _reports = _state.get_existing_vulnerabilities()
+                from baz.evidence.backfill import backfill_run_evidence
+                from baz.report.writer import write_vulnerabilities
+
+                enriched = await backfill_run_evidence(
+                    run_dir=_state.get_run_dir(),
+                    reports=_reports,
+                    sandbox_session=sandbox_session,
+                )
+                if enriched:
+                    logger.info("Backfilled evidence for %d finding(s)", enriched)
+                    write_vulnerabilities(_state.get_run_dir(), _reports, set())
         # Severity is adjudicated after verification and before export, so both
         # the report and the submission package carry the rating the program will
         # see rather than the one the agent guessed at filing time.

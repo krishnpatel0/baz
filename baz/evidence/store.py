@@ -1,22 +1,29 @@
-"""Evidence bundles — a finding as a directory a triager can open.
+"""Evidence bundles — a finding as one flat folder a triager can open.
 
 The gap this closes: a report today is text fields with an `evidence` string.
 The screenshots that prove it were taken, looked at by the model, and thrown
 away. Nothing ties an artifact to a finding, so a hunter who wants to submit has
 to reproduce the whole thing by hand.
 
-A bundle makes the finding self-contained:
+A bundle keeps a finding self-contained: one folder per finding, flat, with the
+report inside it and no subdirectories to dig through.
 
 ```
-<run>/findings/F-0041/
+<run>/vulnerabilities/vuln-0001/
+  vuln-0001.md          the report, citing every artifact below by name
   finding.json          canonical record
-  screenshots/          01-initial-state.png, 02-payload-sent.png, ...
-  http/                 001-request.http, 001-response.http
-  console/              console.log, errors.log
-  har/                  capture.har
-  notes/                free-form artifacts the agent attached
+  01-initial-state.png  01-login-as-bob.png   ... captioned screenshots
+  01-request.http       01-response.http      ... raw exchanges
+  01-exploit.py         02-payload.txt        ... the exact payloads
+  01-sample-records.json                       ... impact proof
+  console.log  errors.log  capture.har         ... when the bug needs them
   timeline.md           ordered, timestamped narration
 ```
+
+Flat on purpose. Nesting the same seven artifact kinds into seven subdirectories
+makes the common case — open the finding, look at the picture, read the payload —
+three clicks instead of none, and a zipped finding indistinguishable from a
+source tree. The artifact kind is in the filename.
 
 Screenshots are captioned at capture time by this module rather than by the
 model. A model-written caption can describe something the image does not show;
@@ -25,10 +32,12 @@ a caption burned in when the shutter fires cannot.
 
 from __future__ import annotations
 
+import base64
+import binascii
+import io
 import json
 import logging
 import re
-import shutil
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
@@ -45,7 +54,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-FINDINGS_DIRNAME = "findings"
+# Findings live under the same ``vulnerabilities/`` directory as their reports, so
+# a finding and its report are one folder rather than two trees joined by a name.
+VULNERABILITIES_DIRNAME = "vulnerabilities"
 CAPTION_HEIGHT = 34
 CAPTION_MAX_CHARS = 96
 """Bound on a caption line. Long enough to say what happened, short enough to
@@ -53,6 +64,16 @@ read at a glance in a report; anything longer gets truncated in the image and
 kept in full in ``timeline.md``."""
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
+_PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+
+_NUMBERED_ARTIFACT = re.compile(r"^\d{2}-")
+"""A bundle artifact always carries its step as a leading ``NN-`` prefix, which
+is what lets the flat folder be read back without a per-kind subdirectory to
+scan. The report and the record are named explicitly and never match."""
+
+_PAYLOAD_SUFFIXES = frozenset(
+    {".py", ".sh", ".txt", ".http", ".json", ".js", ".php", ".xml", ".yml", ".yaml", ".rb", ".pl"}
+)
 
 
 def _slug(value: str, *, limit: int = 60) -> str:
@@ -68,7 +89,8 @@ class Capture:
     """Bundle-relative path of the file."""
 
     kind: str
-    """``screenshot`` | ``http`` | ``console`` | ``har`` | ``note``."""
+    """One of ``screenshot``, ``payload``, ``impact``, ``http``, ``console``,
+    ``har``, ``file`` or ``note``."""
 
     label: str
     step: int
@@ -79,7 +101,7 @@ class Capture:
 
 @dataclass(slots=True)
 class EvidenceBundle:
-    """A finding's on-disk evidence collection."""
+    """A finding's on-disk evidence: one flat folder, report included."""
 
     root: Path
     finding_id: str
@@ -89,70 +111,13 @@ class EvidenceBundle:
     """``(timestamp, line)`` pairs, rendered into ``timeline.md`` at seal time."""
 
     @property
-    def screenshots_dir(self) -> Path:
-        return self.root / "screenshots"
+    def report_path(self) -> Path:
+        """The finding's Markdown report — inside the bundle, beside its evidence."""
+        return self.root / f"{self.finding_id}.md"
 
-    @property
-    def http_dir(self) -> Path:
-        return self.root / "http"
-
-    @property
-    def payload_dir(self) -> Path:
-        return self.root / "payload"
-
-    @property
-    def impact_dir(self) -> Path:
-        return self.root / "impact"
-
-    def payloads(self):
-        """The payload store for this finding, created on first use."""
+    def payloads(self) -> PayloadStore:
+        """The payload store for this finding, rooted at the bundle (flat)."""
         return PayloadStore(self.root)
-
-    def record_payload(
-        self,
-        content: str,
-        *,
-        label: str,
-        step: int | None = None,
-        language: str | None = None,
-        produced: str = "",
-    ) -> str:
-        """Save the exact payload used and return its bundle-relative path.
-
-        Writes through the store so the extension matches the language — a
-        Python exploit stays a `.py`, a raw request becomes `.http` — because a
-        triager reading a 2,000-character SQLi payload should not also have to
-        guess whether it is a shell command.
-        """
-        store = PayloadStore(self.root)
-        # Reconcile with anything already written by an earlier call.
-        store.artifacts = _existing_payloads(store)
-        artifact = store.add(content, label=label, step=step, language=language, produced=produced)
-        if artifact is None:
-            return ""
-        store.write_manifest()
-        path = f"payload/{artifact.filename}"
-        self.register(self.root / path, kind="note", label=label, step=artifact.step or 1)
-        return path
-
-    def record_impact(
-        self,
-        records: list[Any],
-        *,
-        label: str = "sample-records",
-        total_seen: int | None = None,
-    ) -> str:
-        """Save proof data returned by the exploit; return its bundle path."""
-        evidence = capture_impact(self.root, records, label=label, total_seen=total_seen)
-        if evidence is None:
-            return ""
-        path = f"impact/{evidence.note}"
-        self.record(f"impact sample saved: {path}")
-        return path
-
-    def record(self, message: str) -> None:
-        """Append a timeline event. Cheap; call it liberally."""
-        self.events.append((datetime.now(UTC).strftime("%H:%M:%S"), message))
 
     def next_step(self, kind: str) -> int:
         """Ordinal for the next artifact of ``kind``, so files sort by order."""
@@ -171,6 +136,106 @@ class EvidenceBundle:
 
     def of_kind(self, kind: str) -> list[Capture]:
         return [capture for capture in self.captures if capture.kind == kind]
+
+    def record(self, message: str) -> None:
+        """Append a timeline event. Cheap; call it liberally."""
+        self.events.append((datetime.now(UTC).strftime("%H:%M:%S"), message))
+
+    def record_payload(
+        self,
+        content: str,
+        *,
+        label: str,
+        step: int | None = None,
+        language: str | None = None,
+        produced: str = "",
+    ) -> str:
+        """Save the exact payload used and return its bundle-relative path.
+
+        Flat, in the bundle folder itself: the report cites ``02-exploit.py`` and
+        that file sits next to it, not one directory down. The extension matches
+        the language — a Python exploit stays a `.py`, a raw request becomes
+        `.http` — because a triager reading a 2,000-character SQLi payload
+        should not also have to guess whether it is a shell command.
+        """
+        store = PayloadStore(self.root)
+        # Reconcile with anything already written by an earlier call.
+        store.artifacts = _existing_payloads(store)
+        artifact = store.add(content, label=label, step=step, language=language, produced=produced)
+        if artifact is None:
+            return ""
+        store.write_manifest()
+        self.register(
+            self.root / artifact.filename,
+            kind="payload",
+            label=label,
+            step=artifact.step or 1,
+        )
+        return artifact.filename
+
+    def record_impact(
+        self,
+        records: list[Any],
+        *,
+        label: str = "sample-records",
+        total_seen: int | None = None,
+    ) -> str:
+        """Save proof data returned by the exploit; return its bundle-relative path."""
+        step = self.next_step("impact")
+        filename = f"{step:02d}-{_slug(label)}.json"
+        evidence = capture_impact(
+            self.root,
+            records,
+            label=label,
+            total_seen=total_seen,
+            filename=filename,
+        )
+        if evidence is None:
+            return ""
+        self.record(f"impact sample saved: {evidence.note}")
+        self.register(self.root / evidence.note, kind="impact", label=label, step=step)
+        return evidence.note
+
+    def capture_screenshot(
+        self,
+        data: bytes,
+        *,
+        label: str,
+        url: str = "",
+    ) -> str:
+        """Store one captioned screenshot; return its bundle-relative filename.
+
+        ``data`` is the PNG the browser produced, which is what makes capturing
+        possible at all: the sandbox runs the browser, the host writes the
+        bundle, and a screenshot that is only ever written to a container path
+        never reaches the hunter. The caption is burned in here, at the moment
+        of capture, so it cannot drift from what the pixels show.
+        """
+        step = self.next_step("screenshot")
+        filename = f"{step:02d}-{_slug(label)}.png"
+        target = self.root / filename
+        text = " ".join(str(label).split())[:CAPTION_MAX_CHARS]
+        if not _caption_png_bytes(data, target, label=text, step=step, url=url):
+            # Captioning must never lose the evidence: store the raw frame.
+            target.write_bytes(data)
+        self.register(target, kind="screenshot", label=label, step=step)
+        return filename
+
+    def record_text(
+        self,
+        text: str,
+        *,
+        filename: str,
+        kind: str,
+        label: str = "",
+    ) -> str:
+        """Store a text artifact (console log, HTTP exchange, HAR) flat."""
+        step = self.next_step(kind)
+        name = filename if filename.startswith(f"{step:02d}-") else f"{step:02d}-{filename}"
+        target = self.root / name
+        _write_text(target, text if text.endswith("\n") else text + "\n")
+        self.register(target, kind=kind, label=label or name, step=step)
+        return name
 
     def seal(self, record: dict[str, Any]) -> Path:
         """Write ``finding.json`` and ``timeline.md``; return the bundle root.
@@ -197,7 +262,7 @@ class EvidenceBundle:
             lines.append(f"- `{stamp}` {message}")
         if self.captures:
             lines.extend(["", "## Artifacts", ""])
-            for kind in ("screenshot", "http", "console", "har", "note"):
+            for kind in ("screenshot", "payload", "impact", "http", "console", "har", "note"):
                 items = sorted(self.of_kind(kind), key=lambda c: c.step)
                 if not items:
                     continue
@@ -210,17 +275,22 @@ class EvidenceBundle:
 def _existing_payloads(store: Any) -> list[Any]:
     """Reload payload artifacts already on disk so steps do not restart at 1."""
 
-    if not store.dir.is_dir():
+    if not store.root.is_dir():
         return []
     found: list[Any] = []
-    for index, path in enumerate(sorted(store.dir.iterdir()), start=1):
-        if path.suffix in {".json"} and path.name == "manifest.json":
+    for index, path in enumerate(sorted(store.root.iterdir()), start=1):
+        # The bundle is flat, so a payload is any numbered artifact that is not a
+        # file this module writes itself — the report, the record, the timeline,
+        # captioned screenshots — or a text artifact of another kind.
+        if not path.is_file() or not _NUMBERED_ARTIFACT.match(path.name):
             continue
-        if not path.is_file():
+        if path.suffix in {".json", ".md", ".png"}:
             continue
         try:
             body = path.read_text(encoding="utf-8")
-        except OSError:
+        except (OSError, UnicodeDecodeError):
+            continue
+        if classify_language(body) == "text" and path.suffix not in _PAYLOAD_SUFFIXES:
             continue
         found.append(
             PayloadArtifact(
@@ -235,41 +305,46 @@ def _existing_payloads(store: Any) -> list[Any]:
 
 
 def open_bundle(run_dir: Path, finding_id: str, title: str) -> EvidenceBundle:
-    """Create the on-disk skeleton for a new finding."""
-    root = run_dir / FINDINGS_DIRNAME / finding_id
-    for child in ("screenshots", "http", "console", "har", "notes", "payload", "impact"):
-        (root / child).mkdir(parents=True, exist_ok=True)
+    """Create the flat on-disk folder for a new finding, report included."""
+    root = run_dir / VULNERABILITIES_DIRNAME / finding_id
+    root.mkdir(parents=True, exist_ok=True)
     bundle = EvidenceBundle(root=root, finding_id=finding_id, title=title)
     bundle.record(f"bundle opened for {title}")
     return bundle
 
 
-def caption_image(source: Path, destination: Path, *, label: str, step: int, url: str = "") -> bool:
-    """Burn a caption bar onto a screenshot.
+def _caption_png_bytes(
+    data: bytes,
+    destination: Path,
+    *,
+    label: str,
+    step: int,
+    url: str = "",
+) -> bool:
+    """Burn a caption bar onto PNG ``data`` and write it to ``destination``.
 
-    Returns False (leaving ``destination`` unwritten) when Pillow is missing or
-    the image cannot be read, so a captioning failure never loses the evidence —
-    the caller falls back to copying the original.
-
-    Why burn it in rather than keep a sidecar caption: the report embeds the
-    image, and an image without its caption beside it is ambiguous the moment it
-    is dragged anywhere. The caption has to travel with the pixels.
+    Returns False (leaving ``destination`` unwritten) when the bytes are not a
+    readable image, so the caller can fall back to storing the raw frame rather
+    than losing the screenshot.
     """
-    text = " ".join(str(label).split())[:CAPTION_MAX_CHARS]
+    if not data or not data.startswith(_PNG_MAGIC):
+        return False
+
     try:
-        with Image.open(source) as raw:
+        with Image.open(io.BytesIO(data)) as raw:
             image = raw.convert("RGB")
         width, height = image.size
         canvas = Image.new("RGB", (width, height + CAPTION_HEIGHT), (17, 20, 24))
         canvas.paste(image, (0, 0))
         draw = ImageDraw.Draw(canvas)
         bar_top = height + 6
-        draw.text((10, bar_top), f"Step {step}  ·  {text}", fill=(235, 238, 242))
+        draw.text((10, bar_top), f"Step {step}  ·  {label}", fill=(235, 238, 242))
         if url:
             draw.text((10, bar_top + 15), url[:140], fill=(150, 158, 168))
+        destination.parent.mkdir(parents=True, exist_ok=True)
         canvas.save(destination, "PNG", optimize=True)
     except (OSError, ValueError):
-        logger.exception("could not caption %s", source)
+        logger.exception("could not caption screenshot for step %d", step)
         return False
     return True
 
@@ -285,12 +360,28 @@ def _write_json(path: Path, payload: Any) -> None:
     _write_text(path, json.dumps(payload, indent=2, ensure_ascii=False, default=str) + "\n")
 
 
-def copy_into(source: Path, target: Path) -> bool:
-    """Move an artifact from the sandbox mirror into the bundle."""
+async def read_png_from_sandbox(session: Any, container_path: str) -> bytes | None:
+    """Read a screenshot the sandbox wrote, so it can be captioned host-side.
+
+    The browser runs inside the container and writes its screenshots there; only
+    a read like this brings the pixels out. Returns ``None`` — never raising —
+    when the file is missing or unreadable, because a lost screenshot must not
+    abort filing the finding it belongs to.
+
+    ``BaseSandboxSession.read`` is a coroutine returning a binary handle, so this
+    is awaited rather than opened synchronously.
+    """
+    if session is None:
+        return None
     try:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, target)
-    except OSError:
-        logger.exception("could not copy %s into bundle", source)
-        return False
-    return True
+        handle = await session.read(container_path)
+        data = handle.read()
+    except Exception:  # noqa: BLE001 - an unreadable screenshot is not fatal
+        logger.debug("screenshot not readable at %s", container_path, exc_info=True)
+        return None
+    if isinstance(data, str):
+        try:
+            return base64.b64decode(data, validate=True)
+        except (binascii.Error, ValueError):
+            return None
+    return bytes(data) if data else None

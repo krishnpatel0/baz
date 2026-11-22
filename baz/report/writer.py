@@ -156,10 +156,7 @@ def write_vulnerabilities(
     new_reports = [r for r in vulnerability_reports if r["id"] not in saved_vuln_ids]
 
     for report in new_reports:
-        atomic_write_text(
-            vuln_dir / f"{report['id']}.md",
-            render_vulnerability_md(report),
-        )
+        atomic_write_text(_report_path(run_dir, report), render_vulnerability_md(report))
         saved_vuln_ids.add(report["id"])
 
     sorted_reports = sorted(
@@ -178,7 +175,7 @@ def write_vulnerabilities(
                 "title": csv_safe(report["title"]),
                 "severity": csv_safe(report["severity"].upper()),
                 "timestamp": csv_safe(report["timestamp"]),
-                "file": csv_safe(f"vulnerabilities/{report['id']}.md"),
+                "file": csv_safe(_report_path(run_dir, report).relative_to(run_dir).as_posix()),
             },
         )
     atomic_write_text(csv_path, csv_buf.getvalue())
@@ -196,6 +193,24 @@ def write_vulnerabilities(
         )
     logger.info("Updated vulnerability index: %s", csv_path)
     return len(new_reports)
+
+
+def _report_path(run_dir: Path, report: dict[str, Any]) -> Path:
+    """Where a finding's Markdown lives: inside its own evidence folder.
+
+    The report and its artifacts are one unit — a triager opens
+    ``vulnerabilities/vuln-0001/`` and finds the write-up beside the screenshots
+    and payloads it cites, with every link a bare filename that cannot go stale.
+    A finding with no bundle yet (an older report, or evidence collection
+    disabled) still gets a plain ``vulnerabilities/<id>.md`` so the report is
+    never lost to a missing folder.
+    """
+    bundle_path = report.get("evidence_bundle")
+    if isinstance(bundle_path, str) and bundle_path:
+        bundle = Path(bundle_path)
+        if bundle.is_dir():
+            return bundle / f"{report['id']}.md"
+    return run_dir / "vulnerabilities" / f"{report['id']}.md"
 
 
 def atomic_write_text(path: Path, payload: str) -> None:
@@ -220,12 +235,21 @@ def atomic_write_text(path: Path, payload: str) -> None:
     tmp_path.replace(path)
 
 
-def _render_bundle_artifacts(report: dict[str, Any]) -> list[str]:
-    """Render a finding's evidence bundle as report sections.
+def _render_bundle_artifacts(report: dict[str, Any]) -> list[str]:  # noqa: PLR0912
+    """Render a finding's evidence as sections, citing each file by name.
 
-    Screenshots are embedded inline relative to the run directory, so the report
-    stays correct when the whole run folder (or a zipped finding) is moved. A
-    bundle that is missing — an older report, or one filed before bundles
+    The bundle is the finding's own folder, so every reference is a bare
+    filename: the report and the evidence travel together, so a relative link
+    never goes stale and a zipped finding stays readable.
+
+    The sections are driven by ``finding.json`` — the sealed record of what
+    actually landed on disk — not by globbing the directory. That is what the
+    request asked for: a numbered artifact list in which ``Screenshot 1``,
+    ``Payload 2`` and ``Artifact 3`` are names a triager can match to the file
+    sitting beside the report, including whatever file type the agent attached
+    (``.csv``, ``.xlsx``, a capture) with no per-type special-casing.
+
+    A bundle that is missing — an older report, or one filed before bundles
     existed — renders as nothing rather than as an empty section.
     """
     bundle_path = report.get("evidence_bundle")
@@ -235,29 +259,116 @@ def _render_bundle_artifacts(report: dict[str, Any]) -> list[str]:
     if not root.is_dir():
         return []
 
-    lines: list[str] = []
-    shots_dir = root / "screenshots"
-    if shots_dir.is_dir():
-        shots = sorted(shots_dir.glob("*.png"))
-        if shots:
-            lines.append("## Screenshots\n")
-            for shot in shots:
-                # Relative to the report file, which sits one level up from
-                # findings/; a Posix path keeps the markdown valid on Windows.
-                rel = f"../findings/{root.name}/screenshots/{shot.name}"
-                lines.append(f"![{_shot_caption(shot.name)}]({rel})")
-                lines.append("")
-                lines.append(f"*{_shot_caption(shot.name)}*")
-                lines.append("")
+    captures = _sealed_captures(root)
+    if captures is None:
+        # No sealed record: fall back to the folder itself so a bundle written
+        # by an older build still renders.
+        captures = _globbed_captures(root)
+    if not captures:
+        return []
 
-    http_dir = root / "http"
-    if http_dir.is_dir():
-        exchanges = sorted(http_dir.glob("*.http"))
-        if exchanges:
-            lines.append("## Captured Exchanges\n")
-            lines.extend(f"- `findings/{root.name}/http/{e.name}`" for e in exchanges)
+    def present(kind: str) -> list[dict[str, Any]]:
+        return [
+            c
+            for c in captures
+            if c.get("kind") == kind and (root / str(c.get("path", ""))).is_file()
+        ]
+
+    lines: list[str] = []
+
+    screenshots = sorted(present("screenshot"), key=_capture_order)
+    if screenshots:
+        lines.append("## Screenshots\n")
+        for idx, shot in enumerate(screenshots, start=1):
+            name = str(shot["path"])
+            caption = f"Screenshot {idx} — {_shot_caption(name)}"
+            lines.append(f"**{caption}**\n")
+            lines.append(f"![{caption}]({name})")
             lines.append("")
+            lines.append(f"*{caption}*")
+            lines.append("")
+
+    payloads = sorted(present("payload"), key=_capture_order)
+    if payloads:
+        lines.append("## Payloads & Artifacts\n")
+        for idx, item in enumerate(payloads, start=1):
+            name = str(item["path"])
+            lines.append(f"- **Payload {idx}** — [`{name}`]({name}) — {_shot_caption(name)}")
+        lines.append("")
+
+    exchanges = sorted(present("http"), key=_capture_order)
+    if exchanges:
+        lines.append("## Captured Exchanges\n")
+        for idx, item in enumerate(exchanges, start=1):
+            name = str(item["path"])
+            lines.append(f"- **Exchange {idx}** — [`{name}`]({name}) — {_shot_caption(name)}")
+        lines.append("")
+
+    counter = 0
+    for kind, heading in (
+        ("impact", "## Impact Evidence\n"),
+        ("console", "## Console Output\n"),
+        ("har", "## HAR Capture\n"),
+        ("file", "## Attached Artifacts\n"),
+    ):
+        found = sorted(present(kind), key=_capture_order)
+        if not found:
+            continue
+        lines.append(heading)
+        for item in found:
+            counter += 1
+            name = str(item["path"])
+            lines.append(f"- **Artifact {counter}** — [`{name}`]({name}) — {_shot_caption(name)}")
+        lines.append("")
     return lines
+
+
+def _capture_order(capture: dict[str, Any]) -> tuple[int, str]:
+    step = capture.get("step")
+    return (step if isinstance(step, int) else 0, str(capture.get("path", "")))
+
+
+def _sealed_captures(root: Path) -> list[dict[str, Any]] | None:
+    """Read the artifact list sealed into ``finding.json``; ``None`` if absent."""
+    manifest = root / "finding.json"
+    if not manifest.is_file():
+        return None
+    try:
+        body = json.loads(manifest.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        logger.debug("unreadable finding.json at %s", manifest, exc_info=True)
+        return None
+    bundle = body.get("bundle") if isinstance(body, dict) else None
+    raw = bundle.get("captures") if isinstance(bundle, dict) else None
+    if not isinstance(raw, list):
+        return None
+    return [
+        entry for entry in raw if isinstance(entry, dict) and isinstance(entry.get("path"), str)
+    ]
+
+
+def _globbed_captures(root: Path) -> list[dict[str, Any]]:
+    """Fallback artifact list for a bundle that has no sealed ``finding.json``."""
+    captures: list[dict[str, Any]] = []
+    for path in sorted(root.iterdir()):
+        if not path.is_file() or path.name in {"finding.json", "manifest.json", "timeline.md"}:
+            continue
+        if path.suffix in {".md", ".json"}:
+            kind = "impact"
+            if path.suffix == ".md":
+                continue
+        elif path.suffix == ".png":
+            kind = "screenshot"
+        elif path.suffix.lower() == ".http":
+            kind = "http"
+        elif path.suffix.lower() == ".har":
+            kind = "har"
+        elif "console" in path.stem and path.suffix == ".log":
+            kind = "console"
+        else:
+            kind = "file"
+        captures.append({"path": path.name, "kind": kind, "label": path.stem, "step": 0})
+    return captures
 
 
 def _shot_caption(filename: str) -> str:

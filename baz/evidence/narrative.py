@@ -6,8 +6,8 @@ the report says happened, the file that did it, and the picture that proves it.
 
 ```
 Step 2 — the payload fired
-  → payload/02-exploit.py     (the exact script)
-  → screenshots/02-alert.png  (captioned at capture time)
+  → 02-exploit.py      (the exact script, beside the report)
+  → 02-alert.png       (captioned at capture time)
   → observed: alert(document.domain) executed with the session cookie in scope
 ```
 
@@ -143,18 +143,15 @@ def build_from_reports(report: dict[str, Any], bundle_root: Any = None) -> Narra
     payloads: list[str] = []
     root = Path(bundle_root) if bundle_root is not None else None
     if root is not None and root.is_dir():
-        if (root / "screenshots").is_dir():
-            screenshots = [
-                f"../findings/{root.name}/screenshots/{p.name}"
-                for p in sorted((root / "screenshots").glob("*.png"))
-            ]
-        payload_dir = root / "payload"
-        if payload_dir.is_dir():
-            payloads = [
-                f"../findings/{root.name}/payload/{p.name}"
-                for p in sorted(payload_dir.iterdir())
-                if p.is_file() and p.name != "manifest.json"
-            ]
+        # Flat bundle: the report and the evidence are the same folder, so a
+        # reference is the artifact's own filename and the link cannot break
+        # when the finding is zipped or moved.
+        screenshots = [p.name for p in sorted(root.glob("[0-9][0-9]-*.png"))]
+        payloads = [
+            p.name
+            for p in sorted(root.glob("[0-9][0-9]-*"))
+            if p.is_file() and p.suffix not in {".png", ".md", ".json", ".http"}
+        ]
 
     for index, text in enumerate(raw_steps):
         narrative.add(

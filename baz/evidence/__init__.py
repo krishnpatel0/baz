@@ -24,8 +24,6 @@ from baz.evidence.repro import (
 from baz.evidence.store import (
     Capture,
     EvidenceBundle,
-    caption_image,
-    copy_into,
     open_bundle,
 )
 
@@ -43,10 +41,8 @@ __all__ = [
     "Step",
     "Verdict",
     "build_from_reports",
-    "caption_image",
     "capture_impact",
     "classify_language",
-    "copy_into",
     "export_finding",
     "export_run",
     "is_replay_safe",

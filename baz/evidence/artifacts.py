@@ -10,17 +10,15 @@ stolen row are both gone. The triager then has to reconstruct what was sent, and
 the hunter has to reconstruct it first.
 
 So artifacts are stored as files, with the extension that matches what they are,
-in the order they were used:
+in the order they were used — in the finding's own folder, flat:
 
 ```
-findings/<id>/
-  payload/
-    01-request.http          the exact request as sent
-    02-exploit.py            a runnable exploit, Python because it was Python
-    03-exploit.sh            shell where shell was the tool
-    manifest.json            what each artifact is and what it produced
-  impact/
-    sample-records.json      the data actually returned, as found, bounded
+vulnerabilities/<id>/
+  <id>.md                  the report, citing each artifact by name
+  01-request.http          the exact request as sent
+  02-exploit.py            a runnable exploit, Python because it was Python
+  03-exploit.sh            shell where shell was the tool
+  01-sample-records.json   the data actually returned, as found, bounded
 ```
 
 Two rules that matter more than the format:
@@ -54,8 +52,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-PAYLOAD_DIRNAME = "payload"
-IMPACT_DIRNAME = "impact"
+PAYLOAD_DIRNAME = ""
+IMPACT_DIRNAME = ""
+"""Both artifact kinds live in the finding folder itself, flat. Kept as names
+(not inlined) because the payload store and the impact writer both build paths
+from them, and a single empty prefix keeps those call sites identical to the
+directory-per-kind layout they replaced."""
 
 MAX_IMPACT_RECORDS = 5
 """Records kept as impact proof. Enough to show it is systematic and not a
@@ -258,6 +260,7 @@ def capture_impact(
     *,
     label: str = "sample-records",
     total_seen: int | None = None,
+    filename: str | None = None,
 ) -> ImpactEvidence | None:
     """Persist a bounded, marked sample of the data the exploit returned.
 
@@ -292,13 +295,14 @@ def capture_impact(
     if len(body) > MAX_IMPACT_BYTES:
         body = body[:MAX_IMPACT_BYTES] + "\n... truncated\n"
 
-    impact_dir = root / IMPACT_DIRNAME
-    impact_dir.mkdir(parents=True, exist_ok=True)
-    filename = f"{_slug(label)}.json"
-    (impact_dir / filename).write_text(body + "\n", encoding="utf-8")
+    # Flat: the sample sits in the finding folder itself, numbered like every
+    # other artifact so the report can cite it by name and it sorts in step order.
+    root.mkdir(parents=True, exist_ok=True)
+    name = filename or f"{_slug(label)}.json"
+    (root / name).write_text(body + "\n", encoding="utf-8")
 
     return ImpactEvidence(
         records=kept,
         total_seen=total_seen or len(records),
-        note=filename,
+        note=name,
     )

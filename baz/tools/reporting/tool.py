@@ -779,7 +779,7 @@ def _do_delete(
     }
 
 
-async def _do_create(  # noqa: PLR0911
+async def _do_create(  # noqa: PLR0911, PLR0912, PLR0915
     *,
     title: str,
     description: str,
@@ -813,6 +813,7 @@ async def _do_create(  # noqa: PLR0911
     payloads: list[dict[str, Any]] | None = None,
     impact_samples: list[Any] | None = None,
     impact_total_seen: int | None = None,
+    evidence_files: list[str] | None = None,
 ) -> dict[str, Any]:
     errors: list[str] = _validate_required_text(
         {
@@ -988,17 +989,52 @@ async def _do_create(  # noqa: PLR0911
         }
         bundle_dir = _open_evidence_bundle(report_state, report_id, title)
         if bundle_dir is not None:
-            _store_artifacts(
-                bundle_dir,
-                payloads=payloads,
-                impact_samples=impact_samples,
-                impact_total_seen=impact_total_seen,
-            )
-            # Recorded on the finding so the report renderer can embed the
-            # screenshots instead of only naming them.
-            report_state.attach_evidence_bundle(report_id, str(bundle_dir))
+            # One bundle object owns the whole finding: payloads, screenshots,
+            # required files, and finally the seal. Reopening it here rather than
+            # threading the instance through keeps `_open_evidence_bundle`'s
+            # by-directory contract for callers that only have a path.
+            from baz.evidence import open_bundle
+            from baz.evidence.pipeline import attach_finding_evidence
+
+            bundle = open_bundle(bundle_dir.parent.parent, report_id, title)
+            # Gather the proof by default, without being asked: a finding whose
+            # screenshots are still inside a container about to be destroyed is
+            # not evidence. Best-effort by contract — the finding is already
+            # persisted, so a failed artifact costs a warning, not the report.
+            try:
+                artifacts, warnings = await attach_finding_evidence(
+                    bundle,
+                    bundle_dir=bundle_dir,
+                    report_state=report_state,
+                    report_id=report_id,
+                    title=title,
+                    severity=severity,
+                    cvss_score=cvss_score,
+                    target=target,
+                    endpoint=endpoint,
+                    method=method,
+                    cwe=cwe,
+                    cve=cve,
+                    impact=impact,
+                    http_exchange_ids=normalized_http_exchange_ids,
+                    evidence_files=evidence_files,
+                    sandbox_session=sandbox_session,
+                    payloads=payloads,
+                    impact_samples=impact_samples,
+                    impact_total_seen=impact_total_seen,
+                )
+            except Exception:
+                logger.exception("evidence pipeline failed for %s", report_id)
+                artifacts, warnings = [], []
+                warnings.append(
+                    "Automatic evidence collection failed; attach evidence via "
+                    "evidence_files if a screenshot or file is required."
+                )
             result["evidence_dir"] = str(bundle_dir)
             result["evidence_hint"] = _EVIDENCE_HINT
+            result["artifacts"] = artifacts
+            if warnings:
+                result["warnings"] = warnings
         if repro_result is not None:
             report_state.attach_reproduction(report_id, repro_result, replay_safe=replay_safe)
             result["repro"] = repro_result.to_wire()
@@ -1014,7 +1050,7 @@ _EVIDENCE_HINT = (
 
 
 def _store_artifacts(
-    bundle_dir: Path,
+    bundle: Any,
     *,
     payloads: list[dict[str, Any]] | None,
     impact_samples: list[Any] | None,
@@ -1026,13 +1062,6 @@ def _store_artifacts(
     could not be written is a packaging gap, not a reason to lose the finding.
     """
     if not payloads and not impact_samples:
-        return
-    try:
-        from baz.evidence import open_bundle
-
-        bundle = open_bundle(bundle_dir.parent.parent, bundle_dir.name, "artifacts")
-    except (OSError, ValueError):
-        logger.exception("could not open bundle for artifacts")
         return
 
     for index, entry in enumerate(payloads or [], start=1):
@@ -1166,6 +1195,7 @@ async def create_vulnerability_report(
     payloads: list[dict[str, Any]] | None = None,
     impact_samples: list[Any] | None = None,
     impact_total_seen: int | None = None,
+    evidence_files: list[str] | None = None,
 ) -> str:
     """File a vulnerability report — one report per fully-verified finding.
 
@@ -1621,6 +1651,19 @@ async def create_vulnerability_report(
             could reach in total, so the sample reads as a sample rather
             than as the whole of what was exposed. ``137`` with three
             stored records says more than three records alone.
+
+        evidence_files: Optional. Paths **inside the sandbox** of any extra
+            files that prove this finding which the fields above do not
+            cover. Whatever the bug needs — a ``.csv`` export, an ``.xlsx``,
+            a ``.pcap``, a database dump, a screenshot from a tool other
+            than the browser, a log, an archive, a source file. Any type,
+            any count.
+
+            Each path is read out of the sandbox and copied into this
+            finding's own folder beside the report, so the file travels with
+            the finding instead of being stranded in the container. Cite it
+            in the report the way the other artifacts are cited — by the name
+            it lands under, which is the file's own name.
     """
     (
         http_exchange_ids,
@@ -1675,6 +1718,7 @@ async def create_vulnerability_report(
         payloads=payloads,
         impact_samples=impact_samples,
         impact_total_seen=impact_total_seen,
+        evidence_files=evidence_files,
     )
     return json.dumps(_with_warning(result, http_exchange_warning), ensure_ascii=False, default=str)
 
