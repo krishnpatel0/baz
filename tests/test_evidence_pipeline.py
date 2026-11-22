@@ -317,3 +317,44 @@ def test_backfill_leaves_a_sealed_bundle_untouched(run_dir: Path) -> None:
 def test_backfill_without_sandbox_is_a_noop(run_dir: Path) -> None:
     result = asyncio.run(backfill_run_evidence(run_dir=run_dir, reports=[], sandbox_session=None))
     assert result == 0
+
+
+def test_relative_bundle_path_in_a_persisted_run_still_resolves(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A run persisted with a cwd-relative bundle path must reopen from anywhere.
+
+    Regression: the resume path resolves each finding's report relative to the
+    run directory. A stored path like ``baz_runs/x/vulnerabilities/vuln-1`` is
+    relative, and mixing it with an absolute run directory raised
+    ``ValueError: ... is not in the subpath of ...`` — which stopped the
+    interactive interface from starting at all.
+    """
+    run_dir = tmp_path / "runs" / "run-1"
+    bundle = run_dir / "vulnerabilities" / "vuln-0001"
+    bundle.mkdir(parents=True)
+    (bundle / "vuln-0001.md").write_text("# x\n", encoding="utf-8")
+
+    # The run was written from a different working directory.
+    monkeypatch.chdir(tmp_path)
+    report = {
+        "id": "vuln-0001",
+        "title": "x",
+        "evidence_bundle": "runs/run-1/vulnerabilities/vuln-0001",
+    }
+
+    resolved = _report_path(run_dir, report)
+    assert resolved.is_relative_to(run_dir)
+    assert resolved == bundle / "vuln-0001.md"
+
+
+def test_bundle_path_outside_the_run_is_ignored(run_dir: Path) -> None:
+    """A bundle pointing somewhere else must not be trusted or resolved."""
+    outside = run_dir.parent / "elsewhere"
+    outside.mkdir(parents=True)
+    resolved = _report_path(
+        run_dir,
+        {"id": "vuln-0001", "title": "x", "evidence_bundle": str(outside)},
+    )
+    assert resolved.is_relative_to(run_dir)
+    assert resolved == run_dir / "vulnerabilities" / "vuln-0001.md"

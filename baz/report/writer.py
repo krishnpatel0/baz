@@ -17,6 +17,7 @@ from pygments.lexers.special import TextLexer
 from pygments.util import ClassNotFound
 
 from baz.core.paths import run_record_path
+from baz.evidence.store import VULNERABILITIES_DIRNAME
 
 
 if TYPE_CHECKING:
@@ -204,13 +205,66 @@ def _report_path(run_dir: Path, report: dict[str, Any]) -> Path:
     A finding with no bundle yet (an older report, or evidence collection
     disabled) still gets a plain ``vulnerabilities/<id>.md`` so the report is
     never lost to a missing folder.
+
+    The location is derived from ``run_dir`` and the finding id, and the stored
+    ``evidence_bundle`` is treated as a hint that may be relative to wherever
+    the writing process happened to run. Deriving it means a persisted run
+    reopens correctly from any working directory, which is what a resume does.
     """
-    bundle_path = report.get("evidence_bundle")
-    if isinstance(bundle_path, str) and bundle_path:
-        bundle = Path(bundle_path)
-        if bundle.is_dir():
-            return bundle / f"{report['id']}.md"
-    return run_dir / "vulnerabilities" / f"{report['id']}.md"
+    finding_id = str(report.get("id") or "")
+    if finding_id:
+        derived = run_dir / VULNERABILITIES_DIRNAME / finding_id
+        if derived.is_dir():
+            return derived / f"{finding_id}.md"
+
+    stored = _bundle_dir(run_dir, report)
+    if stored is not None:
+        return stored / f"{finding_id}.md"
+    return run_dir / VULNERABILITIES_DIRNAME / f"{finding_id}.md"
+
+
+def _bundle_dir(run_dir: Path, report: dict[str, Any]) -> Path | None:
+    """The finding's bundle directory, anchored inside ``run_dir``.
+
+    Returns ``None`` when the stored path is absent, unreadable, or points
+    outside the run — a stale or hostile path must fall back to the derived
+    location rather than make a caller resolve a path it cannot trust.
+    """
+    raw = report.get("evidence_bundle")
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+
+    candidates: list[Path] = []
+    stored = Path(raw)
+    if stored.is_absolute():
+        candidates.append(stored)
+    else:
+        # Older runs wrote paths relative to the process that created them.
+        candidates.append(_safe_cwd() / stored)
+        candidates.append(run_dir / stored)
+
+    run_root = _resolved(run_dir)
+    for candidate in candidates:
+        resolved = _resolved(candidate)
+        if resolved.is_dir() and resolved.is_relative_to(run_root):
+            return resolved
+    return None
+
+
+def _resolved(path: Path) -> Path:
+    """``path`` as an absolute path, without requiring it to exist."""
+    try:
+        return path.resolve()
+    except OSError:
+        return path.absolute()
+
+
+def _safe_cwd() -> Path:
+    """The working directory, or the filesystem root if it is gone."""
+    try:
+        return Path.cwd()
+    except OSError:
+        return Path(Path("/").anchor or ".")
 
 
 def atomic_write_text(path: Path, payload: str) -> None:
@@ -281,11 +335,14 @@ def _render_bundle_artifacts(report: dict[str, Any]) -> list[str]:  # noqa: PLR0
         lines.append("## Screenshots\n")
         for idx, shot in enumerate(screenshots, start=1):
             name = str(shot["path"])
-            caption = f"Screenshot {idx} — {_shot_caption(name)}"
-            lines.append(f"**{caption}**\n")
-            lines.append(f"![{caption}]({name})")
-            lines.append("")
-            lines.append(f"*{caption}*")
+            # The caption stored at capture time is richer than the filename —
+            # it carries the URL the frame came from, which is what makes the
+            # screenshot verifiable. Fall back to the filename for a bundle an
+            # older build wrote without captions.
+            stored = str(shot.get("label") or "").strip()
+            caption = stored or _shot_caption(name)
+            lines.append(f"**Screenshot {idx} — {caption}**\n")
+            lines.append(f"![Screenshot {idx} — {caption}]({name})")
             lines.append("")
 
     payloads = sorted(present("payload"), key=_capture_order)
